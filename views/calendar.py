@@ -8,7 +8,7 @@ class CalendarView(ft.Container):
         self.page = page
         self.db = db
         self.expand = True
-        self.bgcolor = ft.colors.with_opacity(0.95, "#0f172a")
+        self.bgcolor = ft.Colors.with_opacity(0.95, "#0f172a")
         
         self.build_view()
     
@@ -17,12 +17,12 @@ class CalendarView(ft.Container):
         # Header
         header = ft.Container(
             padding=30,
-            bgcolor=ft.colors.with_opacity(0.8, "#0f172a"),
+            bgcolor=ft.Colors.with_opacity(0.8, "#0f172a"),
             content=ft.Text(
                 "Calendrier",
                 size=28,
                 weight=ft.FontWeight.BOLD,
-                color=ft.colors.WHITE,
+                color=ft.Colors.WHITE,
             ),
         )
         
@@ -33,20 +33,20 @@ class CalendarView(ft.Container):
             content=ft.Column(
                 controls=[
                     ft.Icon(
-                        ft.icons.CALENDAR_MONTH,
+                        ft.Icons.CALENDAR_MONTH,
                         size=64,
-                        color=ft.colors.BLUE,
+                        color=ft.Colors.BLUE,
                     ),
                     ft.Text(
                         "Vue calendrier",
                         size=24,
                         weight=ft.FontWeight.BOLD,
-                        color=ft.colors.WHITE,
+                        color=ft.Colors.WHITE,
                     ),
                     ft.Text(
                         "Cette fonctionnalité affichera toutes vos interventions dans un calendrier interactif.",
                         size=16,
-                        color=ft.colors.with_opacity(0.6, ft.colors.WHITE),
+                        color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE),
                         text_align=ft.TextAlign.CENTER,
                     ),
                 ],

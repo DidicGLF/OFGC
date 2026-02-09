@@ -8,7 +8,7 @@ class ClientsView(ft.Container):
         self.page = page
         self.db = db
         self.expand = True
-        self.bgcolor = ft.colors.with_opacity(0.95, "#0f172a")
+        self.bgcolor = ft.Colors.with_opacity(0.95, "#0f172a")
         self.search_term = ""
         
         self.build_view()
@@ -18,20 +18,20 @@ class ClientsView(ft.Container):
         # Header
         header = ft.Container(
             padding=30,
-            bgcolor=ft.colors.with_opacity(0.8, "#0f172a"),
+            bgcolor=ft.Colors.with_opacity(0.8, "#0f172a"),
             content=ft.Row(
                 controls=[
                     ft.Text(
                         "Gestion des Clients",
                         size=28,
                         weight=ft.FontWeight.BOLD,
-                        color=ft.colors.WHITE,
+                        color=ft.Colors.WHITE,
                     ),
                     ft.ElevatedButton(
                         "➕ Nouveau client",
                         style=ft.ButtonStyle(
-                            bgcolor=ft.colors.BLUE,
-                            color=ft.colors.WHITE,
+                            bgcolor=ft.Colors.BLUE,
+                            color=ft.Colors.WHITE,
                         ),
                         on_click=self.open_add_client_dialog,
                     ),
@@ -42,13 +42,13 @@ class ClientsView(ft.Container):
         
         # Barre de recherche
         self.search_field = ft.TextField(
-            prefix_icon=ft.icons.SEARCH,
+            prefix_icon=ft.Icons.SEARCH,
             hint_text="Rechercher par nom, email, téléphone ou ville...",
             border_radius=12,
             filled=True,
-            bgcolor=ft.colors.with_opacity(0.95, "#1e293b"),
-            border_color=ft.colors.with_opacity(0.2, ft.colors.WHITE),
-            color=ft.colors.WHITE,
+            bgcolor=ft.Colors.with_opacity(0.95, "#1e293b"),
+            border_color=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
+            color=ft.Colors.WHITE,
             on_change=self.on_search_change,
         )
         
@@ -64,7 +64,7 @@ class ClientsView(ft.Container):
         clients_table = ft.Container(
             padding=ft.padding.symmetric(horizontal=40, vertical=0),
             content=ft.Container(
-                bgcolor=ft.colors.with_opacity(0.95, "#1e293b"),
+                bgcolor=ft.Colors.with_opacity(0.95, "#1e293b"),
                 border_radius=16,
                 content=ft.Column(
                     controls=[
@@ -75,10 +75,10 @@ class ClientsView(ft.Container):
                                 "Liste des clients",
                                 size=18,
                                 weight=ft.FontWeight.W_600,
-                                color=ft.colors.WHITE,
+                                color=ft.Colors.WHITE,
                             ),
                         ),
-                        ft.Divider(height=1, color=ft.colors.with_opacity(0.1, ft.colors.WHITE)),
+                        ft.Divider(height=1, color=ft.Colors.with_opacity(0.1, ft.Colors.WHITE)),
                         # Tableau
                         ft.Column(
                             controls=[self.clients_list],
@@ -123,7 +123,7 @@ class ClientsView(ft.Container):
                     content=ft.Text(
                         "Aucun client trouvé" if search_term else "Aucun client enregistré",
                         size=16,
-                        color=ft.colors.with_opacity(0.6, ft.colors.WHITE),
+                        color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE),
                         text_align=ft.TextAlign.CENTER,
                     ),
                     alignment=ft.alignment.center,
@@ -150,12 +150,12 @@ class ClientsView(ft.Container):
                                     client["nom"],
                                     size=15,
                                     weight=ft.FontWeight.W_600,
-                                    color=ft.colors.WHITE,
+                                    color=ft.Colors.WHITE,
                                 ),
                                 ft.Text(
                                     client.get("type_client", "Particulier"),
                                     size=13,
-                                    color=ft.colors.BLUE,
+                                    color=ft.Colors.BLUE,
                                 ),
                             ],
                             spacing=2,
@@ -169,12 +169,12 @@ class ClientsView(ft.Container):
                                 ft.Text(
                                     client.get("email", "-"),
                                     size=14,
-                                    color=ft.colors.WHITE,
+                                    color=ft.Colors.WHITE,
                                 ),
                                 ft.Text(
                                     client.get("telephone", "-"),
                                     size=13,
-                                    color=ft.colors.with_opacity(0.6, ft.colors.WHITE),
+                                    color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE),
                                 ),
                             ],
                             spacing=2,
@@ -186,26 +186,26 @@ class ClientsView(ft.Container):
                         content=ft.Text(
                             f"{client.get('ville', '-')} {client.get('code_postal', '')}".strip(),
                             size=14,
-                            color=ft.colors.WHITE,
+                            color=ft.Colors.WHITE,
                         ),
                     ),
                     # Actions
                     ft.Row(
                         controls=[
                             ft.IconButton(
-                                icon=ft.icons.VISIBILITY,
+                                icon=ft.Icons.VISIBILITY,
                                 icon_size=18,
                                 tooltip="Voir les détails",
                                 on_click=lambda e, c=client: self.view_client(c),
                             ),
                             ft.IconButton(
-                                icon=ft.icons.EDIT,
+                                icon=ft.Icons.EDIT,
                                 icon_size=18,
                                 tooltip="Modifier",
                                 on_click=lambda e, c=client: self.open_edit_client_dialog(c),
                             ),
                             ft.IconButton(
-                                icon=ft.icons.DELETE,
+                                icon=ft.Icons.DELETE,
                                 icon_size=18,
                                 tooltip="Supprimer",
                                 on_click=lambda e, c=client: self.delete_client(c),
@@ -268,7 +268,7 @@ class ClientsView(ft.Container):
             # Message de succès
             self.page.snack_bar = ft.SnackBar(
                 content=ft.Text("Client ajouté avec succès ✅"),
-                bgcolor=ft.colors.GREEN,
+                bgcolor=ft.Colors.GREEN,
             )
             self.page.snack_bar.open = True
             self.page.update()
@@ -349,7 +349,7 @@ class ClientsView(ft.Container):
             # Message de succès
             self.page.snack_bar = ft.SnackBar(
                 content=ft.Text("Client modifié avec succès ✅"),
-                bgcolor=ft.colors.GREEN,
+                bgcolor=ft.Colors.GREEN,
             )
             self.page.snack_bar.open = True
             self.page.update()
@@ -432,7 +432,7 @@ class ClientsView(ft.Container):
             # Message de succès
             self.page.snack_bar = ft.SnackBar(
                 content=ft.Text("Client supprimé ✅"),
-                bgcolor=ft.colors.GREEN,
+                bgcolor=ft.Colors.GREEN,
             )
             self.page.snack_bar.open = True
             self.page.update()
@@ -444,8 +444,8 @@ class ClientsView(ft.Container):
                 ft.TextButton("Annuler", on_click=lambda e: setattr(dialog, 'open', False) or self.page.update()),
                 ft.ElevatedButton(
                     "Supprimer",
-                    bgcolor=ft.colors.RED,
-                    color=ft.colors.WHITE,
+                    bgcolor=ft.Colors.RED,
+                    color=ft.Colors.WHITE,
                     on_click=confirm_delete,
                 ),
             ],

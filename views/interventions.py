@@ -9,7 +9,7 @@ class InterventionsView(ft.Container):
         self.page = page
         self.db = db
         self.expand = True
-        self.bgcolor = ft.colors.with_opacity(0.95, "#0f172a")
+        self.bgcolor = ft.Colors.with_opacity(0.95, "#0f172a")
         self.search_term = ""
         self.filter_status = "Toutes"
         
@@ -20,20 +20,20 @@ class InterventionsView(ft.Container):
         # Header
         header = ft.Container(
             padding=30,
-            bgcolor=ft.colors.with_opacity(0.8, "#0f172a"),
+            bgcolor=ft.Colors.with_opacity(0.8, "#0f172a"),
             content=ft.Row(
                 controls=[
                     ft.Text(
                         "Gestion des Interventions",
                         size=28,
                         weight=ft.FontWeight.BOLD,
-                        color=ft.colors.WHITE,
+                        color=ft.Colors.WHITE,
                     ),
                     ft.ElevatedButton(
                         "➕ Nouvelle intervention",
                         style=ft.ButtonStyle(
-                            bgcolor=ft.colors.BLUE,
-                            color=ft.colors.WHITE,
+                            bgcolor=ft.Colors.BLUE,
+                            color=ft.Colors.WHITE,
                         ),
                         on_click=self.open_add_intervention_dialog,
                     ),
@@ -44,13 +44,13 @@ class InterventionsView(ft.Container):
         
         # Barre de recherche
         self.search_field = ft.TextField(
-            prefix_icon=ft.icons.SEARCH,
+            prefix_icon=ft.Icons.SEARCH,
             hint_text="Rechercher une intervention...",
             border_radius=12,
             filled=True,
-            bgcolor=ft.colors.with_opacity(0.95, "#1e293b"),
-            border_color=ft.colors.with_opacity(0.2, ft.colors.WHITE),
-            color=ft.colors.WHITE,
+            bgcolor=ft.Colors.with_opacity(0.95, "#1e293b"),
+            border_color=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
+            color=ft.Colors.WHITE,
             on_change=self.on_search_change,
         )
         
@@ -78,7 +78,7 @@ class InterventionsView(ft.Container):
         interventions_table = ft.Container(
             padding=ft.padding.symmetric(horizontal=40, vertical=0),
             content=ft.Container(
-                bgcolor=ft.colors.with_opacity(0.95, "#1e293b"),
+                bgcolor=ft.Colors.with_opacity(0.95, "#1e293b"),
                 border_radius=16,
                 content=ft.Column(
                     controls=[
@@ -91,14 +91,14 @@ class InterventionsView(ft.Container):
                                         "Liste des interventions",
                                         size=18,
                                         weight=ft.FontWeight.W_600,
-                                        color=ft.colors.WHITE,
+                                        color=ft.Colors.WHITE,
                                     ),
                                     self.filter_tabs,
                                 ],
                                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             ),
                         ),
-                        ft.Divider(height=1, color=ft.colors.with_opacity(0.1, ft.colors.WHITE)),
+                        ft.Divider(height=1, color=ft.Colors.with_opacity(0.1, ft.Colors.WHITE)),
                         # Tableau
                         ft.Column(
                             controls=[self.interventions_list],
@@ -151,7 +151,7 @@ class InterventionsView(ft.Container):
                     content=ft.Text(
                         "Aucune intervention trouvée",
                         size=16,
-                        color=ft.colors.with_opacity(0.6, ft.colors.WHITE),
+                        color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE),
                         text_align=ft.TextAlign.CENTER,
                     ),
                     alignment=ft.alignment.center,
@@ -167,17 +167,17 @@ class InterventionsView(ft.Container):
         """Crée une ligne d'intervention"""
         # Déterminer la couleur du badge selon le statut
         if intervention["statut"] == "Terminé":
-            badge_color = ft.colors.GREEN
-            badge_bgcolor = ft.colors.with_opacity(0.15, ft.colors.GREEN)
+            badge_color = ft.Colors.GREEN
+            badge_bgcolor = ft.Colors.with_opacity(0.15, ft.Colors.GREEN)
         elif intervention["statut"] == "En cours":
-            badge_color = ft.colors.ORANGE
-            badge_bgcolor = ft.colors.with_opacity(0.15, ft.colors.ORANGE)
+            badge_color = ft.Colors.ORANGE
+            badge_bgcolor = ft.Colors.with_opacity(0.15, ft.Colors.ORANGE)
         elif intervention.get("priorite") == "Urgent":
-            badge_color = ft.colors.RED
-            badge_bgcolor = ft.colors.with_opacity(0.15, ft.colors.RED)
+            badge_color = ft.Colors.RED
+            badge_bgcolor = ft.Colors.with_opacity(0.15, ft.Colors.RED)
         else:
-            badge_color = ft.colors.BLUE
-            badge_bgcolor = ft.colors.with_opacity(0.15, ft.colors.BLUE)
+            badge_color = ft.Colors.BLUE
+            badge_bgcolor = ft.Colors.with_opacity(0.15, ft.Colors.BLUE)
         
         return ft.Container(
             padding=ft.padding.symmetric(horizontal=25, vertical=20),
@@ -192,12 +192,12 @@ class InterventionsView(ft.Container):
                                     intervention["client_nom"],
                                     size=14,
                                     weight=ft.FontWeight.W_600,
-                                    color=ft.colors.WHITE,
+                                    color=ft.Colors.WHITE,
                                 ),
                                 ft.Text(
                                     intervention.get("client_email", ""),
                                     size=13,
-                                    color=ft.colors.with_opacity(0.6, ft.colors.WHITE),
+                                    color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE),
                                 ),
                             ],
                             spacing=2,
@@ -212,12 +212,12 @@ class InterventionsView(ft.Container):
                                     intervention["titre"],
                                     size=14,
                                     weight=ft.FontWeight.W_500,
-                                    color=ft.colors.WHITE,
+                                    color=ft.Colors.WHITE,
                                 ),
                                 ft.Text(
                                     intervention.get("type_intervention", "-"),
                                     size=13,
-                                    color=ft.colors.with_opacity(0.6, ft.colors.WHITE),
+                                    color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE),
                                 ),
                             ],
                             spacing=2,
@@ -229,7 +229,7 @@ class InterventionsView(ft.Container):
                         content=ft.Text(
                             intervention["date_intervention"],
                             size=14,
-                            color=ft.colors.WHITE,
+                            color=ft.Colors.WHITE,
                         ),
                     ),
                     # Statut
@@ -253,7 +253,7 @@ class InterventionsView(ft.Container):
                         content=ft.Text(
                             f"{intervention.get('cout', 0):.2f}€",
                             size=14,
-                            color=ft.colors.WHITE,
+                            color=ft.Colors.WHITE,
                             weight=ft.FontWeight.W_600,
                         ),
                     ),
@@ -261,19 +261,19 @@ class InterventionsView(ft.Container):
                     ft.Row(
                         controls=[
                             ft.IconButton(
-                                icon=ft.icons.VISIBILITY,
+                                icon=ft.Icons.VISIBILITY,
                                 icon_size=18,
                                 tooltip="Voir les détails",
                                 on_click=lambda e, i=intervention: self.view_intervention(i),
                             ),
                             ft.IconButton(
-                                icon=ft.icons.EDIT,
+                                icon=ft.Icons.EDIT,
                                 icon_size=18,
                                 tooltip="Modifier",
                                 on_click=lambda e, i=intervention: self.open_edit_intervention_dialog(i),
                             ),
                             ft.IconButton(
-                                icon=ft.icons.DELETE,
+                                icon=ft.Icons.DELETE,
                                 icon_size=18,
                                 tooltip="Supprimer",
                                 on_click=lambda e, i=intervention: self.delete_intervention(i),
@@ -297,7 +297,7 @@ class InterventionsView(ft.Container):
         for i, tab in enumerate(self.filter_tabs.controls):
             statuses = ["Toutes", "En cours", "Planifié", "Terminé", "Urgent"]
             if statuses[i] == self.filter_status:
-                tab.style = ft.ButtonStyle(bgcolor=ft.colors.BLUE)
+                tab.style = ft.ButtonStyle(bgcolor=ft.Colors.BLUE)
             else:
                 tab.style = ft.ButtonStyle(bgcolor=None)
     
@@ -394,7 +394,7 @@ class InterventionsView(ft.Container):
             # Message de succès
             self.page.snack_bar = ft.SnackBar(
                 content=ft.Text("Intervention ajoutée avec succès ✅"),
-                bgcolor=ft.colors.GREEN,
+                bgcolor=ft.Colors.GREEN,
             )
             self.page.snack_bar.open = True
             self.page.update()
@@ -532,7 +532,7 @@ class InterventionsView(ft.Container):
             
             self.page.snack_bar = ft.SnackBar(
                 content=ft.Text("Intervention modifiée avec succès ✅"),
-                bgcolor=ft.colors.GREEN,
+                bgcolor=ft.Colors.GREEN,
             )
             self.page.snack_bar.open = True
             self.page.update()
@@ -615,7 +615,7 @@ class InterventionsView(ft.Container):
             
             self.page.snack_bar = ft.SnackBar(
                 content=ft.Text("Intervention supprimée ✅"),
-                bgcolor=ft.colors.GREEN,
+                bgcolor=ft.Colors.GREEN,
             )
             self.page.snack_bar.open = True
             self.page.update()
@@ -627,8 +627,8 @@ class InterventionsView(ft.Container):
                 ft.TextButton("Annuler", on_click=lambda e: setattr(dialog, 'open', False) or self.page.update()),
                 ft.ElevatedButton(
                     "Supprimer",
-                    bgcolor=ft.colors.RED,
-                    color=ft.colors.WHITE,
+                    bgcolor=ft.Colors.RED,
+                    color=ft.Colors.WHITE,
                     on_click=confirm_delete,
                 ),
             ],

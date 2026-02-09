@@ -8,7 +8,7 @@ class DashboardView(ft.Container):
         self.page = page
         self.db = db
         self.expand = True
-        self.bgcolor = ft.colors.with_opacity(0.95, "#0f172a")
+        self.bgcolor = ft.Colors.with_opacity(0.95, "#0f172a")
         
         self.build_view()
     
@@ -23,29 +23,29 @@ class DashboardView(ft.Container):
         # Header
         header = ft.Container(
             padding=30,
-            bgcolor=ft.colors.with_opacity(0.8, "#0f172a"),
+            bgcolor=ft.Colors.with_opacity(0.8, "#0f172a"),
             content=ft.Row(
                 controls=[
                     ft.Text(
                         "Tableau de bord",
                         size=28,
                         weight=ft.FontWeight.BOLD,
-                        color=ft.colors.WHITE,
+                        color=ft.Colors.WHITE,
                     ),
                     ft.Row(
                         controls=[
                             ft.ElevatedButton(
                                 "📤 Exporter",
                                 style=ft.ButtonStyle(
-                                    bgcolor=ft.colors.with_opacity(0.95, "#1e293b"),
-                                    color=ft.colors.WHITE,
+                                    bgcolor=ft.Colors.with_opacity(0.95, "#1e293b"),
+                                    color=ft.Colors.WHITE,
                                 ),
                             ),
                             ft.ElevatedButton(
                                 "➕ Nouvelle intervention",
                                 style=ft.ButtonStyle(
-                                    bgcolor=ft.colors.BLUE,
-                                    color=ft.colors.WHITE,
+                                    bgcolor=ft.Colors.BLUE,
+                                    color=ft.Colors.WHITE,
                                 ),
                             ),
                         ],
@@ -60,13 +60,13 @@ class DashboardView(ft.Container):
         search_bar = ft.Container(
             padding=ft.padding.symmetric(horizontal=40, vertical=0),
             content=ft.TextField(
-                prefix_icon=ft.icons.SEARCH,
+                prefix_icon=ft.Icons.SEARCH,
                 hint_text="Rechercher un client, une intervention...",
                 border_radius=12,
                 filled=True,
-                bgcolor=ft.colors.with_opacity(0.95, "#1e293b"),
-                border_color=ft.colors.with_opacity(0.2, ft.colors.WHITE),
-                color=ft.colors.WHITE,
+                bgcolor=ft.Colors.with_opacity(0.95, "#1e293b"),
+                border_color=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
+                color=ft.Colors.WHITE,
             ),
         )
         
@@ -79,21 +79,21 @@ class DashboardView(ft.Container):
                         "Total clients",
                         str(stats["total_clients"]),
                         "👥",
-                        ft.colors.BLUE,
+                        ft.Colors.BLUE,
                         "+12 ce mois"
                     ),
                     self.create_stat_card(
                         "Interventions actives",
                         str(stats["interventions_actives"]),
                         "🔧",
-                        ft.colors.GREEN,
+                        ft.Colors.GREEN,
                         "+5 aujourd'hui"
                     ),
                     self.create_stat_card(
                         "En attente",
                         str(stats["interventions_attente"]),
                         "⏳",
-                        ft.colors.ORANGE,
+                        ft.Colors.ORANGE,
                         "Nécessite attention"
                     ),
                 ],
@@ -106,7 +106,7 @@ class DashboardView(ft.Container):
         interventions_table = ft.Container(
             padding=ft.padding.symmetric(horizontal=40, vertical=0),
             content=ft.Container(
-                bgcolor=ft.colors.with_opacity(0.95, "#1e293b"),
+                bgcolor=ft.Colors.with_opacity(0.95, "#1e293b"),
                 border_radius=16,
                 content=ft.Column(
                     controls=[
@@ -119,11 +119,11 @@ class DashboardView(ft.Container):
                                         "Interventions récentes",
                                         size=18,
                                         weight=ft.FontWeight.W_600,
-                                        color=ft.colors.WHITE,
+                                        color=ft.Colors.WHITE,
                                     ),
                                     ft.Row(
                                         controls=[
-                                            ft.TextButton("Toutes", style=ft.ButtonStyle(bgcolor=ft.colors.BLUE)),
+                                            ft.TextButton("Toutes", style=ft.ButtonStyle(bgcolor=ft.Colors.BLUE)),
                                             ft.TextButton("En cours"),
                                             ft.TextButton("Terminées"),
                                         ],
@@ -133,7 +133,7 @@ class DashboardView(ft.Container):
                                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             ),
                         ),
-                        ft.Divider(height=1, color=ft.colors.with_opacity(0.1, ft.colors.WHITE)),
+                        ft.Divider(height=1, color=ft.Colors.with_opacity(0.1, ft.Colors.WHITE)),
                         # Lignes du tableau
                         *[self.create_intervention_row(intervention) for intervention in interventions],
                     ],
@@ -162,9 +162,9 @@ class DashboardView(ft.Container):
         return ft.Container(
             expand=True,
             padding=24,
-            bgcolor=ft.colors.with_opacity(0.95, "#1e293b"),
+            bgcolor=ft.Colors.with_opacity(0.95, "#1e293b"),
             border_radius=16,
-            border=ft.border.all(1, ft.colors.with_opacity(0.1, ft.colors.WHITE)),
+            border=ft.border.all(1, ft.Colors.with_opacity(0.1, ft.Colors.WHITE)),
             content=ft.Column(
                 controls=[
                     ft.Row(
@@ -172,13 +172,13 @@ class DashboardView(ft.Container):
                             ft.Text(
                                 label,
                                 size=14,
-                                color=ft.colors.with_opacity(0.6, ft.colors.WHITE),
+                                color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE),
                                 weight=ft.FontWeight.W_500,
                             ),
                             ft.Container(
                                 width=40,
                                 height=40,
-                                bgcolor=ft.colors.with_opacity(0.15, color),
+                                bgcolor=ft.Colors.with_opacity(0.15, color),
                                 border_radius=10,
                                 content=ft.Text(
                                     icon,
@@ -194,12 +194,12 @@ class DashboardView(ft.Container):
                         value,
                         size=32,
                         weight=ft.FontWeight.BOLD,
-                        color=ft.colors.WHITE,
+                        color=ft.Colors.WHITE,
                     ),
                     ft.Text(
                         change,
                         size=13,
-                        color=ft.colors.GREEN,
+                        color=ft.Colors.GREEN,
                         weight=ft.FontWeight.W_500,
                     ),
                 ],
@@ -211,14 +211,14 @@ class DashboardView(ft.Container):
         """Crée une ligne d'intervention"""
         # Déterminer la couleur du badge selon le statut
         if intervention["statut"] == "Terminé":
-            badge_color = ft.colors.GREEN
-            badge_bgcolor = ft.colors.with_opacity(0.15, ft.colors.GREEN)
+            badge_color = ft.Colors.GREEN
+            badge_bgcolor = ft.Colors.with_opacity(0.15, ft.Colors.GREEN)
         elif intervention["statut"] == "En cours":
-            badge_color = ft.colors.ORANGE
-            badge_bgcolor = ft.colors.with_opacity(0.15, ft.colors.ORANGE)
+            badge_color = ft.Colors.ORANGE
+            badge_bgcolor = ft.Colors.with_opacity(0.15, ft.Colors.ORANGE)
         else:
-            badge_color = ft.colors.RED
-            badge_bgcolor = ft.colors.with_opacity(0.15, ft.colors.RED)
+            badge_color = ft.Colors.RED
+            badge_bgcolor = ft.Colors.with_opacity(0.15, ft.Colors.RED)
         
         return ft.Container(
             padding=ft.padding.symmetric(horizontal=25, vertical=20),
@@ -233,12 +233,12 @@ class DashboardView(ft.Container):
                                     intervention["client_nom"],
                                     size=14,
                                     weight=ft.FontWeight.W_600,
-                                    color=ft.colors.WHITE,
+                                    color=ft.Colors.WHITE,
                                 ),
                                 ft.Text(
                                     intervention.get("client_email", ""),
                                     size=13,
-                                    color=ft.colors.with_opacity(0.6, ft.colors.WHITE),
+                                    color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE),
                                 ),
                             ],
                             spacing=2,
@@ -250,7 +250,7 @@ class DashboardView(ft.Container):
                         content=ft.Text(
                             intervention.get("type_intervention", ""),
                             size=14,
-                            color=ft.colors.WHITE,
+                            color=ft.Colors.WHITE,
                         ),
                     ),
                     # Date
@@ -259,7 +259,7 @@ class DashboardView(ft.Container):
                         content=ft.Text(
                             intervention["date_intervention"],
                             size=14,
-                            color=ft.colors.WHITE,
+                            color=ft.Colors.WHITE,
                         ),
                     ),
                     # Statut
@@ -281,19 +281,19 @@ class DashboardView(ft.Container):
                     ft.Row(
                         controls=[
                             ft.IconButton(
-                                icon=ft.icons.VISIBILITY,
+                                icon=ft.Icons.VISIBILITY,
                                 icon_size=18,
-                                icon_color=ft.colors.with_opacity(0.6, ft.colors.WHITE),
+                                icon_color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE),
                             ),
                             ft.IconButton(
-                                icon=ft.icons.EDIT,
+                                icon=ft.Icons.EDIT,
                                 icon_size=18,
-                                icon_color=ft.colors.with_opacity(0.6, ft.colors.WHITE),
+                                icon_color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE),
                             ),
                             ft.IconButton(
-                                icon=ft.icons.DELETE,
+                                icon=ft.Icons.DELETE,
                                 icon_size=18,
-                                icon_color=ft.colors.with_opacity(0.6, ft.colors.WHITE),
+                                icon_color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE),
                             ),
                         ],
                         spacing=8,

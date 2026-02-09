@@ -22,11 +22,11 @@ class ClientProApp:
         # Thème personnalisé
         self.page.theme = ft.Theme(
             color_scheme=ft.ColorScheme(
-                primary=ft.colors.BLUE,
-                on_primary=ft.colors.WHITE,
-                secondary=ft.colors.BLUE_GREY_900,
-                background=ft.colors.with_opacity(0.95, "#0f172a"),
-                surface=ft.colors.with_opacity(0.95, "#1e293b"),
+                primary=ft.Colors.BLUE,
+                on_primary=ft.Colors.WHITE,
+                secondary=ft.Colors.BLUE_GREY_900,
+                background=ft.Colors.with_opacity(0.95, "#0f172a"),
+                surface=ft.Colors.with_opacity(0.95, "#1e293b"),
             )
         )
         
@@ -37,7 +37,7 @@ class ClientProApp:
         # Sidebar
         self.sidebar = ft.Container(
             width=280,
-            bgcolor=ft.colors.with_opacity(0.95, "#0f172a"),
+            bgcolor=ft.Colors.with_opacity(0.95, "#0f172a"),
             content=ft.Column(
                 controls=[
                     # Logo
@@ -49,19 +49,19 @@ class ClientProApp:
                                     "Client",
                                     size=24,
                                     weight=ft.FontWeight.BOLD,
-                                    color=ft.colors.WHITE,
+                                    color=ft.Colors.WHITE,
                                 ),
                                 ft.Text(
                                     "Pro",
                                     size=24,
                                     weight=ft.FontWeight.BOLD,
-                                    color=ft.colors.BLUE,
+                                    color=ft.Colors.BLUE,
                                 ),
                             ],
                             spacing=0,
                         ),
                     ),
-                    ft.Divider(height=1, color=ft.colors.with_opacity(0.1, ft.colors.WHITE)),
+                    ft.Divider(height=1, color=ft.Colors.with_opacity(0.1, ft.Colors.WHITE)),
                     
                     # Navigation
                     ft.Container(
@@ -85,7 +85,7 @@ class ClientProApp:
         # Zone de contenu principal
         self.content_area = ft.Container(
             expand=True,
-            bgcolor=ft.colors.with_opacity(0.95, "#0f172a"),
+            bgcolor=ft.Colors.with_opacity(0.95, "#0f172a"),
             content=ft.Column(
                 expand=True,
                 spacing=0,
@@ -115,8 +115,8 @@ class ClientProApp:
             padding=14,
             margin=ft.margin.symmetric(horizontal=15, vertical=4),
             border_radius=12,
-            bgcolor=ft.colors.BLUE if is_active else None,
-            animate=ft.animation.Animation(200, ft.AnimationCurve.EASE_OUT),
+            bgcolor=ft.Colors.BLUE if is_active else None,
+            animate=ft.Animation(200, ft.AnimationCurve.EASE_OUT),
             content=ft.Row(
                 controls=[
                     ft.Text(icon, size=20),
@@ -124,7 +124,7 @@ class ClientProApp:
                         label,
                         size=15,
                         weight=ft.FontWeight.W_600 if is_active else ft.FontWeight.W_500,
-                        color=ft.colors.WHITE if is_active else ft.colors.with_opacity(0.6, ft.colors.WHITE),
+                        color=ft.Colors.WHITE if is_active else ft.Colors.with_opacity(0.6, ft.Colors.WHITE),
                     ),
                 ],
                 spacing=14,
@@ -170,7 +170,7 @@ class ClientProApp:
                         ft.Text(
                             "Cette fonctionnalité sera disponible prochainement.",
                             size=16,
-                            color=ft.colors.with_opacity(0.6, ft.colors.WHITE),
+                            color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE),
                         ),
                     ],
                     spacing=10,

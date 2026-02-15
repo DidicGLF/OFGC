@@ -3,13 +3,15 @@ from database import Database
 
 
 class ClientsView(ft.Container):
-    def __init__(self, page: ft.Page, db: Database):
+    def __init__(self, page: ft.Page, db: Database, navigate_callback=None):
         super().__init__()
         self.page = page
         self.db = db
+        self.navigate_callback = navigate_callback
         self.expand = True
         self.bgcolor = ft.Colors.with_opacity(0.95, "#0f172a")
         self.search_term = ""
+        self.filter_statut = "Tous"
         
         self.build_view()
     
@@ -29,10 +31,8 @@ class ClientsView(ft.Container):
                     ),
                     ft.ElevatedButton(
                         "➕ Nouveau client",
-                        style=ft.ButtonStyle(
-                            bgcolor=ft.Colors.BLUE,
-                            color=ft.Colors.WHITE,
-                        ),
+                        bgcolor=ft.Colors.BLUE,
+                        color=ft.Colors.WHITE,
                         on_click=self.open_add_client_dialog,
                     ),
                 ],
@@ -40,10 +40,25 @@ class ClientsView(ft.Container):
             ),
         )
         
+        # Boutons de filtre
+        self.filter_tabs = ft.Row(
+            controls=[
+                ft.TextButton("Tous", on_click=lambda e: self.change_filter("Tous")),
+                ft.TextButton("Particulier", on_click=lambda e: self.change_filter("Particulier")),
+                ft.TextButton("Professionnel", on_click=lambda e: self.change_filter("Professionnel")),
+            ],
+            spacing=10,
+        )
+        
+        filter_bar = ft.Container(
+            padding=ft.padding.symmetric(horizontal=40, vertical=10),
+            content=self.filter_tabs,
+        )
+        
         # Barre de recherche
         self.search_field = ft.TextField(
             prefix_icon=ft.Icons.SEARCH,
-            hint_text="Rechercher par nom, email, téléphone ou ville...",
+            hint_text="Rechercher par nom, email, téléphone...",
             border_radius=12,
             filled=True,
             bgcolor=ft.Colors.with_opacity(0.95, "#1e293b"),
@@ -57,7 +72,7 @@ class ClientsView(ft.Container):
             content=self.search_field,
         )
         
-        # Liste des clients (DataTable)
+        # Liste des clients
         self.clients_list = ft.Column(spacing=0)
         self.load_clients()
         
@@ -97,6 +112,7 @@ class ClientsView(ft.Container):
         main_content = ft.Column(
             controls=[
                 header,
+                filter_bar,
                 search_bar,
                 clients_table,
             ],
@@ -104,7 +120,23 @@ class ClientsView(ft.Container):
             expand=True,
         )
         
+        self.update_filter_tabs()
         self.content = main_content
+    
+    def change_filter(self, statut):
+        """Change le filtre de statut"""
+        self.filter_statut = statut
+        self.update_filter_tabs()
+        self.load_clients(self.search_term)
+    
+    def update_filter_tabs(self):
+        """Met à jour l'apparence des onglets de filtre"""
+        for i, tab in enumerate(self.filter_tabs.controls):
+            statuts = ["Tous", "Particulier", "Professionnel"]
+            if statuts[i] == self.filter_statut:
+                tab.style = ft.ButtonStyle(bgcolor=ft.Colors.BLUE, color=ft.Colors.WHITE)
+            else:
+                tab.style = ft.ButtonStyle(bgcolor=None, color=None)
     
     def load_clients(self, search_term: str = ""):
         """Charge la liste des clients"""
@@ -115,6 +147,10 @@ class ClientsView(ft.Container):
             clients = self.db.search_clients(search_term)
         else:
             clients = self.db.get_all_clients()
+        
+        # Appliquer le filtre de statut
+        if self.filter_statut != "Tous":
+            clients = [c for c in clients if c.get("statut") == self.filter_statut]
         
         if not clients:
             self.clients_list.controls.append(
@@ -141,21 +177,21 @@ class ClientsView(ft.Container):
             padding=ft.padding.symmetric(horizontal=25, vertical=20),
             content=ft.Row(
                 controls=[
-                    # Nom et type
+                    # Nom et statut
                     ft.Container(
                         width=280,
                         content=ft.Column(
                             controls=[
                                 ft.Text(
-                                    client["nom"],
+                                    client["nom_prenom"],
                                     size=15,
                                     weight=ft.FontWeight.W_600,
                                     color=ft.Colors.WHITE,
                                 ),
                                 ft.Text(
-                                    client.get("type_client", "Particulier"),
+                                    client.get("statut", "Particulier"),
                                     size=13,
-                                    color=ft.Colors.BLUE,
+                                    color=ft.Colors.ORANGE if client.get("statut") == "Professionnel" else ft.Colors.BLUE,
                                 ),
                             ],
                             spacing=2,
@@ -171,22 +207,55 @@ class ClientsView(ft.Container):
                                     size=14,
                                     color=ft.Colors.WHITE,
                                 ),
+                                # Téléphones avec icônes
+                                ft.Column(
+                                    controls=[
+                                        ft.Row(
+                                            controls=[
+                                                ft.Icon(ft.Icons.PHONE, size=14, color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE)),
+                                                ft.Text(
+                                                    client.get("telephone_fixe", ""),
+                                                    size=13,
+                                                    color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE),
+                                                ),
+                                            ],
+                                            spacing=5,
+                                        ) if client.get("telephone_fixe") else ft.Container(height=0),
+                                        ft.Row(
+                                            controls=[
+                                                ft.Icon(ft.Icons.SMARTPHONE, size=14, color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE)),
+                                                ft.Text(
+                                                    client.get("telephone_portable", ""),
+                                                    size=13,
+                                                    color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE),
+                                                ),
+                                            ],
+                                            spacing=5,
+                                        ) if client.get("telephone_portable") else ft.Container(height=0),
+                                    ],
+                                    spacing=2,
+                                ),
+                            ],
+                            spacing=4,
+                        ),
+                    ),
+                    # Localisation
+                    ft.Container(
+                        width=250,
+                        content=ft.Column(
+                            controls=[
                                 ft.Text(
-                                    client.get("telephone", "-"),
+                                    client.get("adresse", "-"),
+                                    size=14,
+                                    color=ft.Colors.WHITE,
+                                ),
+                                ft.Text(
+                                    f"{client.get('code_postal', '')} {client.get('ville', '')}".strip() or "-",
                                     size=13,
                                     color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE),
                                 ),
                             ],
                             spacing=2,
-                        ),
-                    ),
-                    # Localisation
-                    ft.Container(
-                        width=200,
-                        content=ft.Text(
-                            f"{client.get('ville', '-')} {client.get('code_postal', '')}".strip(),
-                            size=14,
-                            color=ft.Colors.WHITE,
                         ),
                     ),
                     # Actions
@@ -226,43 +295,47 @@ class ClientsView(ft.Container):
     def open_add_client_dialog(self, e):
         """Ouvre le dialogue d'ajout de client"""
         # Champs du formulaire
-        nom_field = ft.TextField(label="Nom *", autofocus=True)
-        email_field = ft.TextField(label="Email")
-        telephone_field = ft.TextField(label="Téléphone")
+        nom_prenom_field = ft.TextField(label="Nom Prénom *", autofocus=True)
         adresse_field = ft.TextField(label="Adresse")
-        ville_field = ft.TextField(label="Ville")
-        code_postal_field = ft.TextField(label="Code postal")
-        type_client_dropdown = ft.Dropdown(
-            label="Type de client",
+        code_postal_field = ft.TextField(label="Code postal", width=150)
+        ville_field = ft.TextField(label="Ville", expand=True)
+        telephone_fixe_field = ft.TextField(label="Téléphone fixe")
+        telephone_portable_field = ft.TextField(label="Téléphone portable")
+        email_field = ft.TextField(label="Email")
+        statut_dropdown = ft.Dropdown(
+            label="Statut",
             options=[
                 ft.dropdown.Option("Particulier"),
-                ft.dropdown.Option("Entreprise"),
+                ft.dropdown.Option("Professionnel"),
             ],
             value="Particulier",
         )
-        notes_field = ft.TextField(label="Notes", multiline=True, min_lines=3)
+        
+        def close_dialog(e):
+            self.page.close(dialog)
         
         def save_client(e):
-            if not nom_field.value:
-                nom_field.error_text = "Le nom est obligatoire"
+            if not nom_prenom_field.value:
+                nom_prenom_field.error_text = "Le nom prénom est obligatoire"
                 self.page.update()
                 return
             
             # Ajouter le client
             self.db.add_client(
-                nom=nom_field.value,
-                email=email_field.value,
-                telephone=telephone_field.value,
-                adresse=adresse_field.value,
-                ville=ville_field.value,
-                code_postal=code_postal_field.value,
-                type_client=type_client_dropdown.value,
-                notes=notes_field.value,
+                nom_prenom=nom_prenom_field.value,
+                adresse=adresse_field.value or "",
+                code_postal=code_postal_field.value or "",
+                ville=ville_field.value or "",
+                telephone_fixe=telephone_fixe_field.value or "",
+                telephone_portable=telephone_portable_field.value or "",
+                email=email_field.value or "",
+                statut=statut_dropdown.value,
             )
             
-            # Fermer le dialogue et recharger la liste
-            dialog.open = False
-            self.page.update()
+            # Fermer le dialogue
+            self.page.close(dialog)
+            
+            # Recharger la liste
             self.load_clients()
             
             # Message de succès
@@ -274,76 +347,80 @@ class ClientsView(ft.Container):
             self.page.update()
         
         dialog = ft.AlertDialog(
+            modal=True,
             title=ft.Text("Nouveau client"),
             content=ft.Container(
-                width=500,
+                width=600,
+                padding=ft.padding.only(top=20, bottom=10, left=10, right=10),
                 content=ft.Column(
                     controls=[
-                        nom_field,
-                        type_client_dropdown,
-                        email_field,
-                        telephone_field,
+                        nom_prenom_field,
+                        statut_dropdown,
                         adresse_field,
-                        ft.Row([ville_field, code_postal_field], spacing=10),
-                        notes_field,
+                        ft.Row([code_postal_field, ville_field], spacing=15),
+                        telephone_fixe_field,
+                        telephone_portable_field,
+                        email_field,
                     ],
-                    spacing=15,
+                    spacing=25,
                     scroll=ft.ScrollMode.AUTO,
-                    height=400,
+                    height=500,
                 ),
             ),
             actions=[
-                ft.TextButton("Annuler", on_click=lambda e: setattr(dialog, 'open', False) or self.page.update()),
+                ft.TextButton("Annuler", on_click=close_dialog),
                 ft.ElevatedButton("Enregistrer", on_click=save_client),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
         
-        self.page.dialog = dialog
-        dialog.open = True
-        self.page.update()
+        self.page.open(dialog)
     
     def open_edit_client_dialog(self, client):
         """Ouvre le dialogue de modification de client"""
-        # Pré-remplir les champs avec les données existantes
-        nom_field = ft.TextField(label="Nom *", value=client["nom"], autofocus=True)
-        email_field = ft.TextField(label="Email", value=client.get("email", ""))
-        telephone_field = ft.TextField(label="Téléphone", value=client.get("telephone", ""))
+        # Pré-remplir les champs
+        nom_prenom_field = ft.TextField(label="Nom Prénom *", value=client["nom_prenom"], autofocus=True)
         adresse_field = ft.TextField(label="Adresse", value=client.get("adresse", ""))
-        ville_field = ft.TextField(label="Ville", value=client.get("ville", ""))
-        code_postal_field = ft.TextField(label="Code postal", value=client.get("code_postal", ""))
-        type_client_dropdown = ft.Dropdown(
-            label="Type de client",
+        code_postal_field = ft.TextField(label="Code postal", value=client.get("code_postal", ""), width=150)
+        ville_field = ft.TextField(label="Ville", value=client.get("ville", ""), expand=True)
+        telephone_fixe_field = ft.TextField(label="Téléphone fixe", value=client.get("telephone_fixe", ""))
+        telephone_portable_field = ft.TextField(label="Téléphone portable", value=client.get("telephone_portable", ""))
+        email_field = ft.TextField(label="Email", value=client.get("email", ""))
+        statut_dropdown = ft.Dropdown(
+            label="Statut",
             options=[
                 ft.dropdown.Option("Particulier"),
-                ft.dropdown.Option("Entreprise"),
+                ft.dropdown.Option("Professionnel"),
             ],
-            value=client.get("type_client", "Particulier"),
+            value=client.get("statut", "Particulier"),
         )
-        notes_field = ft.TextField(label="Notes", multiline=True, min_lines=3, value=client.get("notes", ""))
+        
+        def close_dialog(e):
+            self.page.close(dialog)
         
         def save_changes(e):
-            if not nom_field.value:
-                nom_field.error_text = "Le nom est obligatoire"
+            if not nom_prenom_field.value:
+                nom_prenom_field.error_text = "Le nom prénom est obligatoire"
                 self.page.update()
                 return
             
             # Mettre à jour le client
             self.db.update_client(
                 client["id"],
-                nom=nom_field.value,
-                email=email_field.value,
-                telephone=telephone_field.value,
-                adresse=adresse_field.value,
-                ville=ville_field.value,
-                code_postal=code_postal_field.value,
-                type_client=type_client_dropdown.value,
-                notes=notes_field.value,
+                nom_prenom=nom_prenom_field.value,
+                adresse=adresse_field.value or "",
+                code_postal=code_postal_field.value or "",
+                ville=ville_field.value or "",
+                telephone_fixe=telephone_fixe_field.value or "",
+                telephone_portable=telephone_portable_field.value or "",
+                email=email_field.value or "",
+                statut=statut_dropdown.value,
             )
             
-            # Fermer le dialogue et recharger la liste
-            dialog.open = False
-            self.page.update()
+            # Fermer le dialogue
+            self.page.close(dialog)
+            
+            # Recharger la liste
             self.load_clients(self.search_term)
             
             # Message de succès
@@ -355,78 +432,156 @@ class ClientsView(ft.Container):
             self.page.update()
         
         dialog = ft.AlertDialog(
+            modal=True,
             title=ft.Text("Modifier le client"),
             content=ft.Container(
-                width=500,
+                width=600,
+                padding=ft.padding.only(top=20, bottom=10, left=10, right=10),
                 content=ft.Column(
                     controls=[
-                        nom_field,
-                        type_client_dropdown,
-                        email_field,
-                        telephone_field,
+                        nom_prenom_field,
+                        statut_dropdown,
                         adresse_field,
-                        ft.Row([ville_field, code_postal_field], spacing=10),
-                        notes_field,
+                        ft.Row([code_postal_field, ville_field], spacing=15),
+                        telephone_fixe_field,
+                        telephone_portable_field,
+                        email_field,
                     ],
-                    spacing=15,
+                    spacing=25,
                     scroll=ft.ScrollMode.AUTO,
-                    height=400,
+                    height=500,
                 ),
             ),
             actions=[
-                ft.TextButton("Annuler", on_click=lambda e: setattr(dialog, 'open', False) or self.page.update()),
+                ft.TextButton("Annuler", on_click=close_dialog),
                 ft.ElevatedButton("Enregistrer", on_click=save_changes),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
         
-        self.page.dialog = dialog
-        dialog.open = True
-        self.page.update()
+        self.page.open(dialog)
     
     def view_client(self, client):
         """Affiche les détails d'un client"""
         interventions = self.db.get_interventions_by_client(client["id"])
         
+        def close_dialog(e):
+            self.page.close(dialog)
+        
+        def view_interventions(e):
+            close_dialog(e)
+            # Naviguer vers la page interventions avec filtre sur ce client
+            if self.navigate_callback:
+                self.navigate_callback("interventions", filter_client_id=client["id"], filter_client_name=client["nom_prenom"])
+            else:
+                # Fallback si pas de callback
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(f"Navigation vers interventions de {client['nom_prenom']}"),
+                    bgcolor=ft.Colors.BLUE,
+                )
+                self.page.snack_bar.open = True
+                self.page.update()
+        
         dialog = ft.AlertDialog(
-            title=ft.Text(client["nom"]),
+            modal=True,
+            title=ft.Text(client["nom_prenom"], size=20, weight=ft.FontWeight.BOLD),
             content=ft.Container(
-                width=500,
+                width=550,
+                padding=ft.padding.all(10),
                 content=ft.Column(
                     controls=[
-                        ft.Text(f"Type: {client.get('type_client', 'Particulier')}", size=14),
-                        ft.Divider(),
-                        ft.Text("Contact", weight=ft.FontWeight.BOLD),
+                        # Statut
+                        ft.Container(
+                            padding=ft.padding.symmetric(horizontal=12, vertical=6),
+                            bgcolor=ft.Colors.ORANGE if client.get("statut") == "Professionnel" else ft.Colors.BLUE,
+                            border_radius=6,
+                            content=ft.Text(
+                                client.get("statut", "Particulier"),
+                                size=13,
+                                color=ft.Colors.WHITE,
+                                weight=ft.FontWeight.W_600,
+                            ),
+                        ),
+                        
+                        ft.Divider(height=20),
+                        
+                        # Contact
+                        ft.Text("📧 Contact", weight=ft.FontWeight.BOLD, size=16),
                         ft.Text(f"Email: {client.get('email', '-')}", size=14),
-                        ft.Text(f"Téléphone: {client.get('telephone', '-')}", size=14),
-                        ft.Divider(),
-                        ft.Text("Adresse", weight=ft.FontWeight.BOLD),
-                        ft.Text(f"{client.get('adresse', '-')}", size=14),
-                        ft.Text(f"{client.get('ville', '-')} {client.get('code_postal', '')}", size=14),
-                        ft.Divider(),
-                        ft.Text(f"Interventions: {len(interventions)}", weight=ft.FontWeight.BOLD),
-                        ft.Text(f"Notes: {client.get('notes', '-')}", size=14),
+                        ft.Row([
+                            ft.Icon(ft.Icons.PHONE, size=16),
+                            ft.Text(client.get('telephone_fixe', 'Non renseigné'), size=14),
+                        ], spacing=5) if client.get('telephone_fixe') else ft.Container(height=0),
+                        ft.Row([
+                            ft.Icon(ft.Icons.SMARTPHONE, size=16),
+                            ft.Text(client.get('telephone_portable', 'Non renseigné'), size=14),
+                        ], spacing=5) if client.get('telephone_portable') else ft.Container(height=0),
+                        
+                        ft.Divider(height=20),
+                        
+                        # Adresse
+                        ft.Text("📍 Adresse", weight=ft.FontWeight.BOLD, size=16),
+                        ft.Text(client.get('adresse', '-'), size=14),
+                        ft.Text(f"{client.get('code_postal', '')} {client.get('ville', '')}", size=14),
+                        
+                        ft.Divider(height=20),
+                        
+                        # Interventions
+                        ft.Container(
+                            padding=15,
+                            bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.BLUE),
+                            border_radius=8,
+                            content=ft.Column(
+                                controls=[
+                                    ft.Row([
+                                        ft.Icon(ft.Icons.ASSIGNMENT, color=ft.Colors.BLUE),
+                                        ft.Text(
+                                            f"Interventions: {len(interventions)}",
+                                            weight=ft.FontWeight.BOLD,
+                                            size=16,
+                                        ),
+                                    ], spacing=10),
+                                    ft.ElevatedButton(
+                                        "📋 Voir toutes les interventions",
+                                        bgcolor=ft.Colors.BLUE,
+                                        color=ft.Colors.WHITE,
+                                        on_click=view_interventions,
+                                    ) if len(interventions) > 0 else ft.Text(
+                                        "Aucune intervention enregistrée",
+                                        size=13,
+                                        italic=True,
+                                        color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE),
+                                    ),
+                                ],
+                                spacing=10,
+                            ),
+                        ),
                     ],
-                    spacing=10,
+                    spacing=8,
                     scroll=ft.ScrollMode.AUTO,
-                    height=400,
                 ),
             ),
             actions=[
-                ft.TextButton("Fermer", on_click=lambda e: setattr(dialog, 'open', False) or self.page.update()),
+                ft.TextButton("Fermer", on_click=close_dialog),
+                ft.ElevatedButton("Modifier", on_click=lambda e: (close_dialog(e), self.open_edit_client_dialog(client))),
             ],
+            actions_alignment=ft.MainAxisAlignment.END,
         )
         
-        self.page.dialog = dialog
-        dialog.open = True
-        self.page.update()
+        self.page.open(dialog)
     
     def delete_client(self, client):
         """Supprime un client après confirmation"""
+        def close_dialog(e):
+            self.page.close(dialog)
+        
         def confirm_delete(e):
             self.db.delete_client(client["id"])
-            dialog.open = False
-            self.page.update()
+            
+            # Fermer le dialogue
+            self.page.close(dialog)
+            
+            # Recharger la liste
             self.load_clients(self.search_term)
             
             # Message de succès
@@ -438,10 +593,11 @@ class ClientsView(ft.Container):
             self.page.update()
         
         dialog = ft.AlertDialog(
+            modal=True,
             title=ft.Text("Confirmer la suppression"),
-            content=ft.Text(f"Êtes-vous sûr de vouloir supprimer le client '{client['nom']}' ?"),
+            content=ft.Text(f"Êtes-vous sûr de vouloir supprimer le client '{client['nom_prenom']}' ?"),
             actions=[
-                ft.TextButton("Annuler", on_click=lambda e: setattr(dialog, 'open', False) or self.page.update()),
+                ft.TextButton("Annuler", on_click=close_dialog),
                 ft.ElevatedButton(
                     "Supprimer",
                     bgcolor=ft.Colors.RED,
@@ -452,6 +608,4 @@ class ClientsView(ft.Container):
             actions_alignment=ft.MainAxisAlignment.END,
         )
         
-        self.page.dialog = dialog
-        dialog.open = True
-        self.page.update()
+        self.page.open(dialog)

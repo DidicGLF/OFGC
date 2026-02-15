@@ -1,48 +1,70 @@
 import flet as ft
 from database import Database
 from datetime import datetime
+from date_picker_custom import create_custom_date_picker
 
 
 class InterventionsView(ft.Container):
-    def __init__(self, page: ft.Page, db: Database):
+    def __init__(self, page: ft.Page, db: Database, filter_client_id=None, filter_client_name=None):
         super().__init__()
         self.page = page
         self.db = db
         self.expand = True
         self.bgcolor = ft.Colors.with_opacity(0.95, "#0f172a")
         self.search_term = ""
-        self.filter_status = "Toutes"
+        self.filter_paiement = "Toutes"
+        self.filter_client_id = filter_client_id
+        self.filter_client_name = filter_client_name
         
         self.build_view()
     
     def build_view(self):
         """Construit la vue des interventions"""
-        # Header
         header = ft.Container(
             padding=30,
             bgcolor=ft.Colors.with_opacity(0.8, "#0f172a"),
             content=ft.Row(
                 controls=[
-                    ft.Text(
-                        "Gestion des Interventions",
-                        size=28,
-                        weight=ft.FontWeight.BOLD,
-                        color=ft.Colors.WHITE,
+                    ft.Column(
+                        controls=[
+                            ft.Text("Gestion des Interventions", size=28, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                            ft.Container(
+                                content=ft.Row(
+                                    controls=[
+                                        ft.Icon(ft.Icons.FILTER_ALT, size=16, color=ft.Colors.BLUE),
+                                        ft.Text(f"Client: {self.filter_client_name}", size=14, color=ft.Colors.BLUE),
+                                        ft.IconButton(
+                                            icon=ft.Icons.CLOSE,
+                                            icon_size=16,
+                                            tooltip="Retirer le filtre",
+                                            on_click=self.clear_client_filter,
+                                        ),
+                                    ],
+                                    spacing=5,
+                                ),
+                                visible=self.filter_client_id is not None,
+                            ),
+                        ],
+                        spacing=5,
                     ),
-                    ft.ElevatedButton(
-                        "➕ Nouvelle intervention",
-                        style=ft.ButtonStyle(
-                            bgcolor=ft.Colors.BLUE,
-                            color=ft.Colors.WHITE,
-                        ),
-                        on_click=self.open_add_intervention_dialog,
-                    ),
+                    ft.ElevatedButton("➕ Nouvelle intervention", bgcolor=ft.Colors.BLUE, color=ft.Colors.WHITE, on_click=self.open_add_intervention_dialog),
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             ),
         )
         
-        # Barre de recherche
+        self.filter_tabs = ft.Row(
+            controls=[
+                ft.TextButton("Toutes", on_click=lambda e: self.change_filter("Toutes")),
+                ft.TextButton("Payé", on_click=lambda e: self.change_filter("Payé")),
+                ft.TextButton("À payer", on_click=lambda e: self.change_filter("À payer")),
+                ft.TextButton("Gratuit", on_click=lambda e: self.change_filter("Gratuit")),
+            ],
+            spacing=10,
+        )
+        
+        filter_bar = ft.Container(padding=ft.padding.symmetric(horizontal=40, vertical=10), content=self.filter_tabs)
+        
         self.search_field = ft.TextField(
             prefix_icon=ft.Icons.SEARCH,
             hint_text="Rechercher une intervention...",
@@ -54,25 +76,10 @@ class InterventionsView(ft.Container):
             on_change=self.on_search_change,
         )
         
-        search_bar = ft.Container(
-            padding=ft.padding.symmetric(horizontal=40, vertical=20),
-            content=self.search_field,
-        )
+        search_bar = ft.Container(padding=ft.padding.symmetric(horizontal=40, vertical=10), content=self.search_field)
         
-        # Filtres
-        self.filter_tabs = ft.Row(
-            controls=[
-                ft.TextButton("Toutes", on_click=lambda e: self.set_filter("Toutes")),
-                ft.TextButton("En cours", on_click=lambda e: self.set_filter("En cours")),
-                ft.TextButton("Planifié", on_click=lambda e: self.set_filter("Planifié")),
-                ft.TextButton("Terminé", on_click=lambda e: self.set_filter("Terminé")),
-                ft.TextButton("Urgent", on_click=lambda e: self.set_filter("Urgent")),
-            ],
-            spacing=10,
-        )
-        
-        # Liste des interventions
         self.interventions_list = ft.Column(spacing=0)
+        self.update_filter_tabs()
         self.load_interventions()
         
         interventions_table = ft.Container(
@@ -82,29 +89,9 @@ class InterventionsView(ft.Container):
                 border_radius=16,
                 content=ft.Column(
                     controls=[
-                        # En-tête
-                        ft.Container(
-                            padding=20,
-                            content=ft.Row(
-                                controls=[
-                                    ft.Text(
-                                        "Liste des interventions",
-                                        size=18,
-                                        weight=ft.FontWeight.W_600,
-                                        color=ft.Colors.WHITE,
-                                    ),
-                                    self.filter_tabs,
-                                ],
-                                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                            ),
-                        ),
+                        ft.Container(padding=20, content=ft.Text("Liste des interventions", size=18, weight=ft.FontWeight.W_600, color=ft.Colors.WHITE)),
                         ft.Divider(height=1, color=ft.Colors.with_opacity(0.1, ft.Colors.WHITE)),
-                        # Tableau
-                        ft.Column(
-                            controls=[self.interventions_list],
-                            scroll=ft.ScrollMode.AUTO,
-                            expand=True,
-                        ),
+                        ft.Column(controls=[self.interventions_list], scroll=ft.ScrollMode.AUTO, expand=True),
                     ],
                     spacing=0,
                     expand=True,
@@ -113,47 +100,43 @@ class InterventionsView(ft.Container):
             expand=True,
         )
         
-        # Contenu principal
-        main_content = ft.Column(
-            controls=[
-                header,
-                search_bar,
-                interventions_table,
-            ],
-            spacing=0,
-            expand=True,
-        )
-        
+        main_content = ft.Column(controls=[header, filter_bar, search_bar, interventions_table], spacing=0, expand=True)
         self.content = main_content
+    
+    def change_filter(self, paiement):
+        self.filter_paiement = paiement
         self.update_filter_tabs()
+        self.load_interventions()
+    
+    def update_filter_tabs(self):
+        for i, tab in enumerate(self.filter_tabs.controls):
+            paiements = ["Toutes", "Payé", "À payer", "Gratuit"]
+            if paiements[i] == self.filter_paiement:
+                tab.style = ft.ButtonStyle(bgcolor=ft.Colors.BLUE, color=ft.Colors.WHITE)
+            else:
+                tab.style = ft.ButtonStyle(bgcolor=None, color=None)
     
     def load_interventions(self):
-        """Charge la liste des interventions"""
         self.interventions_list.controls.clear()
         
-        # Récupérer les interventions
         if self.search_term:
             interventions = self.db.search_interventions(self.search_term)
         else:
             interventions = self.db.get_all_interventions()
         
-        # Appliquer le filtre de statut
-        if self.filter_status != "Toutes":
-            if self.filter_status == "Urgent":
-                interventions = [i for i in interventions if i.get("priorite") == "Urgent"]
-            else:
-                interventions = [i for i in interventions if i.get("statut") == self.filter_status]
+        # Filtre par client si actif
+        if self.filter_client_id:
+            interventions = [i for i in interventions if i["client_id"] == self.filter_client_id]
+        
+        # Filtre par paiement
+        if self.filter_paiement != "Toutes":
+            interventions = [i for i in interventions if i["paiement"] == self.filter_paiement]
         
         if not interventions:
             self.interventions_list.controls.append(
                 ft.Container(
                     padding=40,
-                    content=ft.Text(
-                        "Aucune intervention trouvée",
-                        size=16,
-                        color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE),
-                        text_align=ft.TextAlign.CENTER,
-                    ),
+                    content=ft.Text("Aucune intervention trouvée", size=16, color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE), text_align=ft.TextAlign.CENTER),
                     alignment=ft.alignment.center,
                 )
             )
@@ -163,121 +146,49 @@ class InterventionsView(ft.Container):
         
         self.page.update()
     
+    def clear_client_filter(self, e):
+        """Retire le filtre client"""
+        self.filter_client_id = None
+        self.filter_client_name = None
+        self.build_view()
+        self.page.update()
+    
+    def format_date_display(self, date_str):
+        """Convertit YYYY-MM-DD en JJ/MM/AAAA pour affichage"""
+        try:
+            date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+            return date_obj.strftime("%d/%m/%Y")
+        except:
+            return date_str
+    
     def create_intervention_row(self, intervention):
-        """Crée une ligne d'intervention"""
-        # Déterminer la couleur du badge selon le statut
-        if intervention["statut"] == "Terminé":
-            badge_color = ft.Colors.GREEN
-            badge_bgcolor = ft.Colors.with_opacity(0.15, ft.Colors.GREEN)
-        elif intervention["statut"] == "En cours":
-            badge_color = ft.Colors.ORANGE
-            badge_bgcolor = ft.Colors.with_opacity(0.15, ft.Colors.ORANGE)
-        elif intervention.get("priorite") == "Urgent":
-            badge_color = ft.Colors.RED
-            badge_bgcolor = ft.Colors.with_opacity(0.15, ft.Colors.RED)
+        if intervention.get("effectuee"):
+            badge_color, badge_bgcolor = ft.Colors.GREEN, ft.Colors.with_opacity(0.15, ft.Colors.GREEN)
+            badge_text = "✅ Effectuée"
         else:
-            badge_color = ft.Colors.BLUE
-            badge_bgcolor = ft.Colors.with_opacity(0.15, ft.Colors.BLUE)
+            badge_color, badge_bgcolor = ft.Colors.ORANGE, ft.Colors.with_opacity(0.15, ft.Colors.ORANGE)
+            badge_text = "⏳ À venir"
+        
+        heures = ""
+        if intervention.get("heure_debut") and intervention.get("heure_fin"):
+            heures = f"{intervention['heure_debut']} - {intervention['heure_fin']}"
+        
+        date_display = self.format_date_display(intervention["date_intervention"])
         
         return ft.Container(
             padding=ft.padding.symmetric(horizontal=25, vertical=20),
             content=ft.Row(
                 controls=[
-                    # Client
-                    ft.Container(
-                        width=220,
-                        content=ft.Column(
-                            controls=[
-                                ft.Text(
-                                    intervention["client_nom"],
-                                    size=14,
-                                    weight=ft.FontWeight.W_600,
-                                    color=ft.Colors.WHITE,
-                                ),
-                                ft.Text(
-                                    intervention.get("client_email", ""),
-                                    size=13,
-                                    color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE),
-                                ),
-                            ],
-                            spacing=2,
-                        ),
-                    ),
-                    # Titre
-                    ft.Container(
-                        width=200,
-                        content=ft.Column(
-                            controls=[
-                                ft.Text(
-                                    intervention["titre"],
-                                    size=14,
-                                    weight=ft.FontWeight.W_500,
-                                    color=ft.Colors.WHITE,
-                                ),
-                                ft.Text(
-                                    intervention.get("type_intervention", "-"),
-                                    size=13,
-                                    color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE),
-                                ),
-                            ],
-                            spacing=2,
-                        ),
-                    ),
-                    # Date
-                    ft.Container(
-                        width=100,
-                        content=ft.Text(
-                            intervention["date_intervention"],
-                            size=14,
-                            color=ft.Colors.WHITE,
-                        ),
-                    ),
-                    # Statut
-                    ft.Container(
-                        width=100,
-                        content=ft.Container(
-                            padding=ft.padding.symmetric(horizontal=12, vertical=6),
-                            bgcolor=badge_bgcolor,
-                            border_radius=6,
-                            content=ft.Text(
-                                intervention["statut"],
-                                size=12,
-                                weight=ft.FontWeight.W_600,
-                                color=badge_color,
-                            ),
-                        ),
-                    ),
-                    # Coût
-                    ft.Container(
-                        width=80,
-                        content=ft.Text(
-                            f"{intervention.get('cout', 0):.2f}€",
-                            size=14,
-                            color=ft.Colors.WHITE,
-                            weight=ft.FontWeight.W_600,
-                        ),
-                    ),
-                    # Actions
+                    ft.Container(width=100, content=ft.Text(intervention["numero"], size=14, weight=ft.FontWeight.W_600, color=ft.Colors.WHITE)),
+                    ft.Container(width=180, content=ft.Column(controls=[ft.Text(intervention["client_nom"], size=14, color=ft.Colors.WHITE), ft.Text(heures, size=12, color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE))], spacing=2)),
+                    ft.Container(width=100, content=ft.Text(date_display, size=14, color=ft.Colors.WHITE)),
+                    ft.Container(width=80, content=ft.Text(intervention.get("lieu", "-"), size=14, color=ft.Colors.with_opacity(0.6, ft.Colors.WHITE))),
+                    ft.Container(width=120, content=ft.Container(padding=ft.padding.symmetric(horizontal=12, vertical=6), bgcolor=badge_bgcolor, border_radius=6, content=ft.Text(badge_text, size=12, weight=ft.FontWeight.W_600, color=badge_color))),
                     ft.Row(
                         controls=[
-                            ft.IconButton(
-                                icon=ft.Icons.VISIBILITY,
-                                icon_size=18,
-                                tooltip="Voir les détails",
-                                on_click=lambda e, i=intervention: self.view_intervention(i),
-                            ),
-                            ft.IconButton(
-                                icon=ft.Icons.EDIT,
-                                icon_size=18,
-                                tooltip="Modifier",
-                                on_click=lambda e, i=intervention: self.open_edit_intervention_dialog(i),
-                            ),
-                            ft.IconButton(
-                                icon=ft.Icons.DELETE,
-                                icon_size=18,
-                                tooltip="Supprimer",
-                                on_click=lambda e, i=intervention: self.delete_intervention(i),
-                            ),
+                            ft.IconButton(icon=ft.Icons.VISIBILITY, icon_size=18, tooltip="Voir", on_click=lambda e, i=intervention: self.view_intervention(i)),
+                            ft.IconButton(icon=ft.Icons.EDIT, icon_size=18, tooltip="Modifier", on_click=lambda e, i=intervention: self.open_edit_intervention_dialog(i)),
+                            ft.IconButton(icon=ft.Icons.DELETE, icon_size=18, tooltip="Supprimer", on_click=lambda e, i=intervention: self.delete_intervention(i)),
                         ],
                         spacing=8,
                     ),
@@ -286,355 +197,280 @@ class InterventionsView(ft.Container):
             ),
         )
     
-    def set_filter(self, status):
-        """Définit le filtre de statut"""
-        self.filter_status = status
-        self.update_filter_tabs()
-        self.load_interventions()
-    
-    def update_filter_tabs(self):
-        """Met à jour l'apparence des onglets de filtre"""
-        for i, tab in enumerate(self.filter_tabs.controls):
-            statuses = ["Toutes", "En cours", "Planifié", "Terminé", "Urgent"]
-            if statuses[i] == self.filter_status:
-                tab.style = ft.ButtonStyle(bgcolor=ft.Colors.BLUE)
-            else:
-                tab.style = ft.ButtonStyle(bgcolor=None)
-    
     def on_search_change(self, e):
-        """Gère le changement dans la barre de recherche"""
         self.search_term = e.control.value
         self.load_interventions()
     
     def open_add_intervention_dialog(self, e):
-        """Ouvre le dialogue d'ajout d'intervention"""
-        # Récupérer la liste des clients pour le dropdown
         clients = self.db.get_all_clients()
-        client_options = [ft.dropdown.Option(key=str(c["id"]), text=c["nom"]) for c in clients]
+        if not clients:
+            self.page.snack_bar = ft.SnackBar(content=ft.Text("Aucun client. Créez d'abord un client."), bgcolor=ft.Colors.RED)
+            self.page.snack_bar.open = True
+            self.page.update()
+            return
         
-        # Champs du formulaire
-        client_dropdown = ft.Dropdown(
-            label="Client *",
-            options=client_options,
-            autofocus=True,
-        )
-        titre_field = ft.TextField(label="Titre *")
-        description_field = ft.TextField(label="Description", multiline=True, min_lines=2)
-        type_dropdown = ft.Dropdown(
-            label="Type d'intervention",
-            options=[
-                ft.dropdown.Option("Maintenance"),
-                ft.dropdown.Option("Installation"),
-                ft.dropdown.Option("Dépannage"),
-                ft.dropdown.Option("Audit"),
-                ft.dropdown.Option("Formation"),
-                ft.dropdown.Option("Consultation"),
-            ],
-        )
-        date_field = ft.TextField(
-            label="Date *",
-            hint_text="AAAA-MM-JJ",
-            value=datetime.now().strftime("%Y-%m-%d"),
-        )
-        heure_debut_field = ft.TextField(label="Heure début", hint_text="HH:MM")
-        heure_fin_field = ft.TextField(label="Heure fin", hint_text="HH:MM")
-        statut_dropdown = ft.Dropdown(
-            label="Statut",
-            options=[
-                ft.dropdown.Option("Planifié"),
-                ft.dropdown.Option("En cours"),
-                ft.dropdown.Option("Terminé"),
-                ft.dropdown.Option("Annulé"),
-            ],
-            value="Planifié",
-        )
-        priorite_dropdown = ft.Dropdown(
-            label="Priorité",
-            options=[
-                ft.dropdown.Option("Normal"),
-                ft.dropdown.Option("Élevé"),
-                ft.dropdown.Option("Urgent"),
-            ],
-            value="Normal",
-        )
-        cout_field = ft.TextField(label="Coût (€)", value="0", keyboard_type=ft.KeyboardType.NUMBER)
-        notes_field = ft.TextField(label="Notes", multiline=True, min_lines=2)
+        client_options = [ft.dropdown.Option(key=str(c["id"]), text=c["nom_prenom"]) for c in clients]
         
-        def save_intervention(e):
-            if not client_dropdown.value or not titre_field.value or not date_field.value:
+        numero_field = ft.TextField(label="Numéro *", hint_text="Ex: INT-001")
+        client_dropdown = ft.Dropdown(label="Client *", options=client_options, autofocus=True)
+        
+        # Date picker intégré (pas de dialog séparé)
+        selected_date = [datetime.now()]  # Liste pour garder la référence
+        date_field = ft.TextField(label="Date *", value=selected_date[0].strftime("%d/%m/%Y"), read_only=True)
+        
+        # Mini calendrier intégré
+        calendar_visible = [False]
+        
+        def on_date_selected(date_obj):
+            selected_date[0] = date_obj
+            date_field.value = date_obj.strftime("%d/%m/%Y")
+            calendar_container.visible = False
+            self.page.update()
+        
+        def toggle_calendar(e):
+            calendar_container.visible = not calendar_container.visible
+            self.page.update()
+        
+        # Importer la fonction de calendrier
+        from date_picker_custom import create_inline_calendar
+        calendar_widget = create_inline_calendar(self.page, selected_date[0], on_date_selected)
+        
+        calendar_container = ft.Container(
+            content=calendar_widget,
+            visible=False,
+            padding=10,
+            bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
+            border_radius=8,
+        )
+        
+        date_button = ft.IconButton(icon=ft.Icons.CALENDAR_MONTH, tooltip="Choisir", on_click=toggle_calendar)
+        
+        heure_debut_field = ft.TextField(label="Heure début", value="09:00", width=100)
+        heure_fin_field = ft.TextField(label="Heure fin", value="10:00", width=100)
+        lieu_dropdown = ft.Dropdown(label="Lieu", options=[ft.dropdown.Option("Domicile"), ft.dropdown.Option("À distance")], value="Domicile")
+        paiement_dropdown = ft.Dropdown(label="Paiement", options=[ft.dropdown.Option("Payé"), ft.dropdown.Option("À payer"), ft.dropdown.Option("Gratuit")], value="À payer")
+        effectuee_checkbox = ft.Checkbox(label="Intervention effectuée", value=False)
+        resume_field = ft.TextField(label="Résumé", multiline=True, min_lines=2)
+        detail_field = ft.TextField(label="Détail", multiline=True, min_lines=3)
+        
+        def close_dialog(e):
+            self.page.close(dialog)
+        
+        def save(e):
+            # Générer le numéro automatiquement si vide
+            if not numero_field.value:
+                numero_field.value = self.db.get_next_numero()
+            
+            if not numero_field.value or not client_dropdown.value or not date_field.value:
+                if not numero_field.value:
+                    numero_field.error_text = "Numéro obligatoire"
                 if not client_dropdown.value:
                     client_dropdown.error_text = "Client obligatoire"
-                if not titre_field.value:
-                    titre_field.error_text = "Titre obligatoire"
                 if not date_field.value:
                     date_field.error_text = "Date obligatoire"
                 self.page.update()
                 return
             
-            # Ajouter l'intervention
-            self.db.add_intervention(
-                client_id=int(client_dropdown.value),
-                titre=titre_field.value,
-                description=description_field.value,
-                type_intervention=type_dropdown.value or "",
-                date_intervention=date_field.value,
-                heure_debut=heure_debut_field.value,
-                heure_fin=heure_fin_field.value,
-                statut=statut_dropdown.value,
-                priorite=priorite_dropdown.value,
-                cout=float(cout_field.value) if cout_field.value else 0,
-                notes=notes_field.value,
-            )
-            
-            # Fermer le dialogue et recharger la liste
-            dialog.open = False
-            self.page.update()
-            self.load_interventions()
-            
-            # Message de succès
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text("Intervention ajoutée avec succès ✅"),
-                bgcolor=ft.Colors.GREEN,
-            )
-            self.page.snack_bar.open = True
-            self.page.update()
-        
-        dialog = ft.AlertDialog(
-            title=ft.Text("Nouvelle intervention"),
-            content=ft.Container(
-                width=550,
-                content=ft.Column(
-                    controls=[
-                        client_dropdown,
-                        titre_field,
-                        type_dropdown,
-                        description_field,
-                        ft.Row([date_field, heure_debut_field, heure_fin_field], spacing=10),
-                        ft.Row([statut_dropdown, priorite_dropdown], spacing=10),
-                        cout_field,
-                        notes_field,
-                    ],
-                    spacing=15,
-                    scroll=ft.ScrollMode.AUTO,
-                    height=450,
-                ),
-            ),
-            actions=[
-                ft.TextButton("Annuler", on_click=lambda e: setattr(dialog, 'open', False) or self.page.update()),
-                ft.ElevatedButton("Enregistrer", on_click=save_intervention),
-            ],
-            actions_alignment=ft.MainAxisAlignment.END,
-        )
-        
-        self.page.dialog = dialog
-        dialog.open = True
-        self.page.update()
-    
-    def open_edit_intervention_dialog(self, intervention):
-        """Ouvre le dialogue de modification d'intervention"""
-        # Récupérer la liste des clients
-        clients = self.db.get_all_clients()
-        client_options = [ft.dropdown.Option(key=str(c["id"]), text=c["nom"]) for c in clients]
-        
-        # Pré-remplir les champs
-        client_dropdown = ft.Dropdown(
-            label="Client *",
-            options=client_options,
-            value=str(intervention["client_id"]),
-        )
-        titre_field = ft.TextField(label="Titre *", value=intervention["titre"])
-        description_field = ft.TextField(
-            label="Description",
-            multiline=True,
-            min_lines=2,
-            value=intervention.get("description", "")
-        )
-        type_dropdown = ft.Dropdown(
-            label="Type d'intervention",
-            options=[
-                ft.dropdown.Option("Maintenance"),
-                ft.dropdown.Option("Installation"),
-                ft.dropdown.Option("Dépannage"),
-                ft.dropdown.Option("Audit"),
-                ft.dropdown.Option("Formation"),
-                ft.dropdown.Option("Consultation"),
-            ],
-            value=intervention.get("type_intervention"),
-        )
-        date_field = ft.TextField(
-            label="Date *",
-            value=intervention["date_intervention"]
-        )
-        heure_debut_field = ft.TextField(
-            label="Heure début",
-            value=intervention.get("heure_debut", "")
-        )
-        heure_fin_field = ft.TextField(
-            label="Heure fin",
-            value=intervention.get("heure_fin", "")
-        )
-        statut_dropdown = ft.Dropdown(
-            label="Statut",
-            options=[
-                ft.dropdown.Option("Planifié"),
-                ft.dropdown.Option("En cours"),
-                ft.dropdown.Option("Terminé"),
-                ft.dropdown.Option("Annulé"),
-            ],
-            value=intervention["statut"],
-        )
-        priorite_dropdown = ft.Dropdown(
-            label="Priorité",
-            options=[
-                ft.dropdown.Option("Normal"),
-                ft.dropdown.Option("Élevé"),
-                ft.dropdown.Option("Urgent"),
-            ],
-            value=intervention.get("priorite", "Normal"),
-        )
-        cout_field = ft.TextField(
-            label="Coût (€)",
-            value=str(intervention.get("cout", 0)),
-            keyboard_type=ft.KeyboardType.NUMBER
-        )
-        notes_field = ft.TextField(
-            label="Notes",
-            multiline=True,
-            min_lines=2,
-            value=intervention.get("notes", "")
-        )
-        
-        def save_changes(e):
-            if not client_dropdown.value or not titre_field.value or not date_field.value:
+            try:
+                date_obj = datetime.strptime(date_field.value, "%d/%m/%Y")
+                date_iso = date_obj.strftime("%Y-%m-%d")
+            except:
+                date_field.error_text = "Date invalide"
                 self.page.update()
                 return
             
-            # Mettre à jour l'intervention
-            self.db.update_intervention(
-                intervention["id"],
+            self.db.add_intervention(
+                numero=numero_field.value,
                 client_id=int(client_dropdown.value),
-                titre=titre_field.value,
-                description=description_field.value,
-                type_intervention=type_dropdown.value or "",
-                date_intervention=date_field.value,
-                heure_debut=heure_debut_field.value,
-                heure_fin=heure_fin_field.value,
-                statut=statut_dropdown.value,
-                priorite=priorite_dropdown.value,
-                cout=float(cout_field.value) if cout_field.value else 0,
-                notes=notes_field.value,
+                date_intervention=date_iso,
+                heure_debut=heure_debut_field.value or "",
+                heure_fin=heure_fin_field.value or "",
+                lieu=lieu_dropdown.value,
+                paiement=paiement_dropdown.value,
+                effectuee=1 if effectuee_checkbox.value else 0,
+                resume=resume_field.value or "",
+                detail=detail_field.value or "",
             )
             
-            # Fermer et recharger
-            dialog.open = False
-            self.page.update()
+            self.page.close(dialog)
             self.load_interventions()
             
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text("Intervention modifiée avec succès ✅"),
-                bgcolor=ft.Colors.GREEN,
-            )
+            self.page.snack_bar = ft.SnackBar(content=ft.Text("Intervention ajoutée ✅"), bgcolor=ft.Colors.GREEN)
             self.page.snack_bar.open = True
             self.page.update()
         
         dialog = ft.AlertDialog(
-            title=ft.Text("Modifier l'intervention"),
+            modal=True,
+            title=ft.Text("Nouvelle intervention"),
             content=ft.Container(
-                width=550,
+                width=600,
+                padding=ft.padding.only(top=20, bottom=10, left=20, right=20),
                 content=ft.Column(
                     controls=[
+                        numero_field,
                         client_dropdown,
-                        titre_field,
-                        type_dropdown,
-                        description_field,
-                        ft.Row([date_field, heure_debut_field, heure_fin_field], spacing=10),
-                        ft.Row([statut_dropdown, priorite_dropdown], spacing=10),
-                        cout_field,
-                        notes_field,
+                        ft.Row([date_field, date_button], spacing=5),
+                        calendar_container,  # Calendrier intégré
+                        ft.Row([heure_debut_field, heure_fin_field], spacing=15),
+                        lieu_dropdown,
+                        paiement_dropdown,
+                        effectuee_checkbox,
+                        resume_field,
+                        detail_field,
                     ],
-                    spacing=15,
+                    spacing=25,
                     scroll=ft.ScrollMode.AUTO,
-                    height=450,
+                    height=550,
                 ),
             ),
-            actions=[
-                ft.TextButton("Annuler", on_click=lambda e: setattr(dialog, 'open', False) or self.page.update()),
-                ft.ElevatedButton("Enregistrer", on_click=save_changes),
-            ],
-            actions_alignment=ft.MainAxisAlignment.END,
+            actions=[ft.TextButton("Annuler", on_click=close_dialog), ft.ElevatedButton("Enregistrer", on_click=save)],
         )
         
-        self.page.dialog = dialog
-        dialog.open = True
-        self.page.update()
+        self.page.open(dialog)
+    
+    def open_edit_intervention_dialog(self, intervention):
+        clients = self.db.get_all_clients()
+        client_options = [ft.dropdown.Option(key=str(c["id"]), text=c["nom_prenom"]) for c in clients]
+        
+        numero_field = ft.TextField(label="Numéro *", value=intervention["numero"])
+        client_dropdown = ft.Dropdown(label="Client *", options=client_options, value=str(intervention["client_id"]))
+        
+        date_display = self.format_date_display(intervention["date_intervention"])
+        date_field = ft.TextField(label="Date *", value=date_display, read_only=True)
+        
+        try:
+            current_date = datetime.strptime(intervention["date_intervention"], "%Y-%m-%d")
+        except:
+            current_date = datetime.now()
+        
+        def on_date_selected(date_obj):
+            date_field.value = date_obj.strftime("%d/%m/%Y")
+            self.page.update()
+        
+        def pick_date(e):
+            picker = create_custom_date_picker(self.page, current_date, on_date_selected)
+            self.page.open(picker)
+        
+        date_button = ft.IconButton(icon=ft.Icons.CALENDAR_MONTH, tooltip="Choisir", on_click=pick_date)
+        
+        heure_debut_field = ft.TextField(label="Heure début", value=intervention.get("heure_debut", ""), width=100)
+        heure_fin_field = ft.TextField(label="Heure fin", value=intervention.get("heure_fin", ""), width=100)
+        lieu_dropdown = ft.Dropdown(label="Lieu", options=[ft.dropdown.Option("Domicile"), ft.dropdown.Option("À distance")], value=intervention.get("lieu"))
+        paiement_dropdown = ft.Dropdown(label="Paiement", options=[ft.dropdown.Option("Payé"), ft.dropdown.Option("À payer"), ft.dropdown.Option("Gratuit")], value=intervention["paiement"])
+        effectuee_checkbox = ft.Checkbox(label="Intervention effectuée", value=bool(intervention.get("effectuee")))
+        resume_field = ft.TextField(label="Résumé", multiline=True, min_lines=2, value=intervention.get("resume", ""))
+        detail_field = ft.TextField(label="Détail", multiline=True, min_lines=3, value=intervention.get("detail", ""))
+        
+        def close_dialog(e):
+            self.page.close(dialog)
+        
+        def save(e):
+            try:
+                date_obj = datetime.strptime(date_field.value, "%d/%m/%Y")
+                date_iso = date_obj.strftime("%Y-%m-%d")
+            except:
+                return
+            
+            self.db.update_intervention(
+                intervention["id"],
+                numero=numero_field.value,
+                client_id=int(client_dropdown.value),
+                date_intervention=date_iso,
+                heure_debut=heure_debut_field.value or "",
+                heure_fin=heure_fin_field.value or "",
+                lieu=lieu_dropdown.value,
+                paiement=paiement_dropdown.value,
+                effectuee=1 if effectuee_checkbox.value else 0,
+                resume=resume_field.value or "",
+                detail=detail_field.value or "",
+            )
+            
+            self.page.close(dialog)
+            self.load_interventions()
+            
+            self.page.snack_bar = ft.SnackBar(content=ft.Text("Intervention modifiée ✅"), bgcolor=ft.Colors.GREEN)
+            self.page.snack_bar.open = True
+            self.page.update()
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Modifier l'intervention"),
+            content=ft.Container(
+                width=600,
+                padding=ft.padding.only(top=20, bottom=10, left=20, right=20),
+                content=ft.Column(
+                    controls=[numero_field, client_dropdown, ft.Row([date_field, date_button], spacing=5), ft.Row([heure_debut_field, heure_fin_field], spacing=15), lieu_dropdown, paiement_dropdown, effectuee_checkbox, resume_field, detail_field],
+                    spacing=25,
+                    scroll=ft.ScrollMode.AUTO,
+                    height=550,
+                ),
+            ),
+            actions=[ft.TextButton("Annuler", on_click=close_dialog), ft.ElevatedButton("Enregistrer", on_click=save)],
+        )
+        
+        self.page.open(dialog)
     
     def view_intervention(self, intervention):
-        """Affiche les détails d'une intervention"""
+        def close_dialog(e):
+            self.page.close(dialog)
+        
+        heures = ""
+        if intervention.get("heure_debut") and intervention.get("heure_fin"):
+            heures = f"{intervention['heure_debut']} - {intervention['heure_fin']}"
+        
+        date_display = self.format_date_display(intervention["date_intervention"])
+        
         dialog = ft.AlertDialog(
-            title=ft.Text(intervention["titre"]),
+            modal=True,
+            title=ft.Text(f"Intervention {intervention['numero']}"),
             content=ft.Container(
-                width=500,
+                width=550,
+                padding=ft.padding.all(10),
                 content=ft.Column(
                     controls=[
                         ft.Text(f"Client: {intervention['client_nom']}", size=14, weight=ft.FontWeight.BOLD),
-                        ft.Text(f"Email: {intervention.get('client_email', '-')}", size=14),
+                        ft.Text(f"Date: {date_display}", size=14),
+                        ft.Text(f"Horaire: {heures if heures else '-'}", size=14),
+                        ft.Text(f"Lieu: {intervention.get('lieu', '-')}", size=14),
+                        ft.Text(f"Paiement: {intervention['paiement']}", size=14),
+                        ft.Text(f"Statut: {'✅ Effectuée' if intervention.get('effectuee') else '⏳ À venir'}", size=14),
                         ft.Divider(),
-                        ft.Text(f"Type: {intervention.get('type_intervention', '-')}", size=14),
-                        ft.Text(f"Date: {intervention['date_intervention']}", size=14),
-                        ft.Text(f"Horaire: {intervention.get('heure_debut', '-')} - {intervention.get('heure_fin', '-')}", size=14),
-                        ft.Text(f"Statut: {intervention['statut']}", size=14),
-                        ft.Text(f"Priorité: {intervention.get('priorite', 'Normal')}", size=14),
-                        ft.Text(f"Coût: {intervention.get('cout', 0):.2f}€", size=14, weight=ft.FontWeight.BOLD),
-                        ft.Divider(),
-                        ft.Text("Description:", weight=ft.FontWeight.BOLD),
-                        ft.Text(intervention.get('description', '-'), size=14),
-                        ft.Text("Notes:", weight=ft.FontWeight.BOLD),
-                        ft.Text(intervention.get('notes', '-'), size=14),
+                        ft.Text("Résumé:", weight=ft.FontWeight.BOLD),
+                        ft.Text(intervention.get('resume', '-'), size=14),
+                        ft.Text("Détail:", weight=ft.FontWeight.BOLD),
+                        ft.Text(intervention.get('detail', '-'), size=14),
                     ],
                     spacing=10,
                     scroll=ft.ScrollMode.AUTO,
                     height=400,
                 ),
             ),
-            actions=[
-                ft.TextButton("Fermer", on_click=lambda e: setattr(dialog, 'open', False) or self.page.update()),
-            ],
+            actions=[ft.TextButton("Fermer", on_click=close_dialog)],
         )
         
-        self.page.dialog = dialog
-        dialog.open = True
-        self.page.update()
+        self.page.open(dialog)
     
     def delete_intervention(self, intervention):
-        """Supprime une intervention après confirmation"""
+        def close_dialog(e):
+            self.page.close(dialog)
+        
         def confirm_delete(e):
             self.db.delete_intervention(intervention["id"])
-            dialog.open = False
-            self.page.update()
+            self.page.close(dialog)
             self.load_interventions()
             
-            self.page.snack_bar = ft.SnackBar(
-                content=ft.Text("Intervention supprimée ✅"),
-                bgcolor=ft.Colors.GREEN,
-            )
+            self.page.snack_bar = ft.SnackBar(content=ft.Text("Intervention supprimée ✅"), bgcolor=ft.Colors.GREEN)
             self.page.snack_bar.open = True
             self.page.update()
         
         dialog = ft.AlertDialog(
+            modal=True,
             title=ft.Text("Confirmer la suppression"),
-            content=ft.Text(f"Êtes-vous sûr de vouloir supprimer l'intervention '{intervention['titre']}' ?"),
+            content=ft.Text(f"Supprimer l'intervention '{intervention['numero']}' ?"),
             actions=[
-                ft.TextButton("Annuler", on_click=lambda e: setattr(dialog, 'open', False) or self.page.update()),
-                ft.ElevatedButton(
-                    "Supprimer",
-                    bgcolor=ft.Colors.RED,
-                    color=ft.Colors.WHITE,
-                    on_click=confirm_delete,
-                ),
+                ft.TextButton("Annuler", on_click=close_dialog),
+                ft.ElevatedButton("Supprimer", bgcolor=ft.Colors.RED, color=ft.Colors.WHITE, on_click=confirm_delete),
             ],
-            actions_alignment=ft.MainAxisAlignment.END,
         )
         
-        self.page.dialog = dialog
-        dialog.open = True
-        self.page.update()
+        self.page.open(dialog)

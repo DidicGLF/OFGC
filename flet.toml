@@ -1,0 +1,26 @@
+# Configuration Flet pour ClientPro
+
+[app]
+name = "OrdiFacile"
+description = "Application de gestion de clients et interventions"
+version = "1.0.0"
+company = "Ordi'Facile"
+product = "OrdiFacile"
+copyright = "Copyright (c) 2026"
+
+# Icône de l'application (créez un fichier icon.png de 512x512px)
+# [app.icon]
+# image = "assets/icon.png"
+
+[build]
+# Inclure tous les fichiers nécessaires
+include_packages = ["sqlite3", "datetime"]
+
+# Exclure les fichiers de test
+exclude = [
+    "test_*.py",
+    "TROUBLESHOOTING.md",
+    "BEST_PRACTICES.md",
+    "__pycache__",
+    "*.pyc",
+]

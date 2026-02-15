@@ -1,17 +1,42 @@
 import sqlite3
+import os
+import sys
+from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Optional
 
 
+def get_data_dir():
+    """
+    Retourne le dossier de données selon l'OS et le mode (dev ou packagé)
+    """
+    if getattr(sys, 'frozen', False):
+        # Mode packagé
+        if os.name == 'nt':  # Windows
+            data_dir = Path(os.getenv('LOCALAPPDATA')) / 'OrdiFacile'
+        elif sys.platform == 'darwin':  # macOS
+            data_dir = Path.home() / 'Library' / 'Application Support' / 'OrdiFacile'
+        else:  # Linux
+            data_dir = Path.home() / '.local' / 'share' / 'OrdiFacile'
+    else:
+        # Mode développement
+        data_dir = Path.cwd()
+    
+    data_dir.mkdir(parents=True, exist_ok=True)
+    return data_dir
+
+
 class Database:
     def __init__(self, db_name: str = "clientpro.db"):
-        self.db_name = db_name
+        db_path = get_data_dir() / db_name
+        self.db_name = str(db_path)
+        print(f"📁 Base de données : {self.db_name}")
         self.init_database()
     
     def get_connection(self):
         """Crée une connexion à la base de données"""
         conn = sqlite3.connect(self.db_name)
-        conn.row_factory = sqlite3.Row  # Pour accéder aux colonnes par nom
+        conn.row_factory = sqlite3.Row
         return conn
     
     def init_database(self):
@@ -19,38 +44,37 @@ class Database:
         conn = self.get_connection()
         cursor = conn.cursor()
         
-        # Table Clients
+        # Table Clients (structure simplifiée)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS clients (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                nom TEXT NOT NULL,
-                email TEXT,
-                telephone TEXT,
+                nom_prenom TEXT NOT NULL,
                 adresse TEXT,
-                ville TEXT,
                 code_postal TEXT,
-                type_client TEXT DEFAULT 'Particulier',
-                notes TEXT,
+                ville TEXT,
+                telephone_fixe TEXT,
+                telephone_portable TEXT,
+                email TEXT,
+                statut TEXT DEFAULT 'Particulier',
                 date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 actif INTEGER DEFAULT 1
             )
         """)
         
-        # Table Interventions
+        # Table Interventions (structure simplifiée)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS interventions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                numero TEXT NOT NULL UNIQUE,
                 client_id INTEGER NOT NULL,
-                titre TEXT NOT NULL,
-                description TEXT,
-                type_intervention TEXT,
                 date_intervention DATE NOT NULL,
-                heure_debut TIME,
-                heure_fin TIME,
-                statut TEXT DEFAULT 'Planifié',
-                priorite TEXT DEFAULT 'Normal',
-                cout REAL DEFAULT 0,
-                notes TEXT,
+                heure_debut TEXT,
+                heure_fin TEXT,
+                lieu TEXT DEFAULT 'Domicile',
+                paiement TEXT DEFAULT 'À payer',
+                effectuee INTEGER DEFAULT 0,
+                resume TEXT,
+                detail TEXT,
                 date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (client_id) REFERENCES clients (id)
             )
@@ -68,11 +92,9 @@ class Database:
     def add_demo_data(self):
         """Ajoute des données de démonstration"""
         demo_clients = [
-            ("Entreprise Martin SARL", "contact@martin-sarl.fr", "06 12 34 56 78", "15 rue du Commerce", "Paris", "75001", "Entreprise", "Client important"),
-            ("Sophie Dubois", "sophie.d@email.com", "06 23 45 67 89", "28 avenue des Lilas", "Lyon", "69001", "Particulier", ""),
-            ("Tech Solutions Inc", "admin@techsolutions.fr", "01 23 45 67 89", "10 boulevard Innovation", "Toulouse", "31000", "Entreprise", "Client VIP"),
-            ("Jean Lefebvre", "j.lefebvre@gmail.com", "06 34 56 78 90", "5 place de la Mairie", "Marseille", "13001", "Particulier", ""),
-            ("Cabinet Médical du Centre", "secretariat@cabinet-centre.fr", "04 56 78 90 12", "42 rue de la Santé", "Nice", "06000", "Entreprise", "Contrat annuel"),
+            ("Martin Dupont", "15 rue du Commerce", "75001", "Paris", "01 23 45 67 89", "06 12 34 56 78", "martin.dupont@email.com", "Professionnel"),
+            ("Sophie Dubois", "28 avenue des Lilas", "69001", "Lyon", "", "06 23 45 67 89", "sophie.d@email.com", "Particulier"),
+            ("Jean Lefebvre", "5 place de la Mairie", "13001", "Marseille", "04 91 23 45 67", "06 34 56 78 90", "j.lefebvre@gmail.com", "Particulier"),
         ]
         
         conn = self.get_connection()
@@ -80,24 +102,20 @@ class Database:
         
         for client in demo_clients:
             cursor.execute("""
-                INSERT INTO clients (nom, email, telephone, adresse, ville, code_postal, type_client, notes)
+                INSERT INTO clients (nom_prenom, adresse, code_postal, ville, telephone_fixe, telephone_portable, email, statut)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, client)
         
         # Interventions de démonstration
         demo_interventions = [
-            (1, "Maintenance serveur", "Vérification et mise à jour du serveur principal", "Maintenance", "2026-02-09", "09:00", "12:00", "Terminé", "Normal", 350.00),
-            (2, "Installation réseau", "Installation du réseau Wi-Fi et câblage", "Installation", "2026-02-08", "14:00", "17:00", "En cours", "Élevé", 450.00),
-            (3, "Audit sécurité", "Audit complet de la sécurité informatique", "Audit", "2026-02-07", "10:00", "16:00", "En cours", "Élevé", 800.00),
-            (4, "Dépannage PC", "Réparation ordinateur portable", "Dépannage", "2026-02-05", "15:00", "16:30", "Terminé", "Normal", 120.00),
-            (5, "Mise à jour logiciel", "Mise à jour urgente du logiciel métier", "Mise à jour", "2026-02-04", "08:00", "10:00", "Urgent", "Urgent", 200.00),
+            ("INT-001", 1, "2026-02-09", "09:00", "12:00", "Domicile", "Payé", 1, "Installation réseau", "Installation et configuration du réseau Wi-Fi domestique"),
+            ("INT-002", 2, "2026-02-12", "14:00", "16:00", "À distance", "À payer", 0, "Dépannage PC", "Résolution problème de démarrage Windows"),
+            ("INT-003", 3, "2026-02-14", "10:00", "11:30", "Domicile", "Gratuit", 0, "Conseil informatique", "Conseils sur le choix d'un nouvel ordinateur"),
         ]
         
         for intervention in demo_interventions:
             cursor.execute("""
-                INSERT INTO interventions 
-                (client_id, titre, description, type_intervention, date_intervention, 
-                 heure_debut, heure_fin, statut, priorite, cout)
+                INSERT INTO interventions (numero, client_id, date_intervention, heure_debut, heure_fin, lieu, paiement, effectuee, resume, detail)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, intervention)
         
@@ -114,7 +132,7 @@ class Database:
         query = "SELECT * FROM clients"
         if actif_only:
             query += " WHERE actif = 1"
-        query += " ORDER BY nom"
+        query += " ORDER BY nom_prenom"
         
         cursor.execute(query)
         clients = [dict(row) for row in cursor.fetchall()]
@@ -132,17 +150,17 @@ class Database:
         
         return dict(row) if row else None
     
-    def add_client(self, nom: str, email: str = "", telephone: str = "", 
-                   adresse: str = "", ville: str = "", code_postal: str = "",
-                   type_client: str = "Particulier", notes: str = "") -> int:
+    def add_client(self, nom_prenom: str, adresse: str = "", code_postal: str = "",
+                   ville: str = "", telephone_fixe: str = "", telephone_portable: str = "",
+                   email: str = "", statut: str = "Particulier") -> int:
         """Ajoute un nouveau client"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
         cursor.execute("""
-            INSERT INTO clients (nom, email, telephone, adresse, ville, code_postal, type_client, notes)
+            INSERT INTO clients (nom_prenom, adresse, code_postal, ville, telephone_fixe, telephone_portable, email, statut)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (nom, email, telephone, adresse, ville, code_postal, type_client, notes))
+        """, (nom_prenom, adresse, code_postal, ville, telephone_fixe, telephone_portable, email, statut))
         
         client_id = cursor.lastrowid
         conn.commit()
@@ -154,7 +172,6 @@ class Database:
         conn = self.get_connection()
         cursor = conn.cursor()
         
-        # Construire la requête dynamiquement
         fields = []
         values = []
         for key, value in kwargs.items():
@@ -196,13 +213,14 @@ class Database:
         cursor.execute("""
             SELECT * FROM clients 
             WHERE actif = 1 AND (
-                nom LIKE ? OR 
+                nom_prenom LIKE ? OR 
                 email LIKE ? OR 
-                telephone LIKE ? OR
+                telephone_fixe LIKE ? OR
+                telephone_portable LIKE ? OR
                 ville LIKE ?
             )
-            ORDER BY nom
-        """, (search_pattern, search_pattern, search_pattern, search_pattern))
+            ORDER BY nom_prenom
+        """, (search_pattern, search_pattern, search_pattern, search_pattern, search_pattern))
         
         clients = [dict(row) for row in cursor.fetchall()]
         conn.close()
@@ -218,12 +236,12 @@ class Database:
         cursor.execute("""
             SELECT 
                 i.*,
-                c.nom as client_nom,
+                c.nom_prenom as client_nom,
                 c.email as client_email,
-                c.telephone as client_telephone
+                c.telephone_portable as client_telephone
             FROM interventions i
             JOIN clients c ON i.client_id = c.id
-            ORDER BY i.date_intervention DESC, i.heure_debut DESC
+            ORDER BY i.date_intervention DESC
         """)
         
         interventions = [dict(row) for row in cursor.fetchall()]
@@ -238,7 +256,7 @@ class Database:
         cursor.execute("""
             SELECT 
                 i.*,
-                c.nom as client_nom,
+                c.nom_prenom as client_nom,
                 c.email as client_email
             FROM interventions i
             JOIN clients c ON i.client_id = c.id
@@ -265,22 +283,19 @@ class Database:
         conn.close()
         return interventions
     
-    def add_intervention(self, client_id: int, titre: str, description: str = "",
-                        type_intervention: str = "", date_intervention: str = "",
+    def add_intervention(self, numero: str, client_id: int, date_intervention: str,
                         heure_debut: str = "", heure_fin: str = "",
-                        statut: str = "Planifié", priorite: str = "Normal",
-                        cout: float = 0, notes: str = "") -> int:
+                        lieu: str = "Domicile", paiement: str = "À payer",
+                        effectuee: int = 0,
+                        resume: str = "", detail: str = "") -> int:
         """Ajoute une nouvelle intervention"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
         cursor.execute("""
-            INSERT INTO interventions 
-            (client_id, titre, description, type_intervention, date_intervention,
-             heure_debut, heure_fin, statut, priorite, cout, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (client_id, titre, description, type_intervention, date_intervention,
-              heure_debut, heure_fin, statut, priorite, cout, notes))
+            INSERT INTO interventions (numero, client_id, date_intervention, heure_debut, heure_fin, lieu, paiement, effectuee, resume, detail)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (numero, client_id, date_intervention, heure_debut, heure_fin, lieu, paiement, effectuee, resume, detail))
         
         intervention_id = cursor.lastrowid
         conn.commit()
@@ -329,21 +344,39 @@ class Database:
         cursor.execute("""
             SELECT 
                 i.*,
-                c.nom as client_nom,
+                c.nom_prenom as client_nom,
                 c.email as client_email
             FROM interventions i
             JOIN clients c ON i.client_id = c.id
             WHERE 
-                i.titre LIKE ? OR 
-                i.description LIKE ? OR
-                i.type_intervention LIKE ? OR
-                c.nom LIKE ?
+                i.numero LIKE ? OR 
+                i.resume LIKE ? OR
+                i.detail LIKE ? OR
+                c.nom_prenom LIKE ?
             ORDER BY i.date_intervention DESC
         """, (search_pattern, search_pattern, search_pattern, search_pattern))
         
         interventions = [dict(row) for row in cursor.fetchall()]
         conn.close()
         return interventions
+    
+    def get_next_numero(self) -> str:
+        """Génère le prochain numéro d'intervention"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT numero FROM interventions ORDER BY id DESC LIMIT 1")
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row:
+            # Extraire le numéro et incrémenter
+            last_num = row['numero']
+            if last_num.startswith('INT-'):
+                num = int(last_num.split('-')[1]) + 1
+                return f"INT-{num:03d}"
+        
+        return "INT-001"
     
     # === STATISTIQUES ===
     
@@ -356,32 +389,18 @@ class Database:
         cursor.execute("SELECT COUNT(*) FROM clients WHERE actif = 1")
         total_clients = cursor.fetchone()[0]
         
-        # Interventions actives (en cours ou planifiées)
-        cursor.execute("""
-            SELECT COUNT(*) FROM interventions 
-            WHERE statut IN ('En cours', 'Planifié')
-        """)
-        interventions_actives = cursor.fetchone()[0]
+        # Total interventions
+        cursor.execute("SELECT COUNT(*) FROM interventions")
+        total_interventions = cursor.fetchone()[0]
         
-        # Interventions en attente
-        cursor.execute("""
-            SELECT COUNT(*) FROM interventions 
-            WHERE statut = 'Planifié'
-        """)
-        interventions_attente = cursor.fetchone()[0]
-        
-        # Interventions urgentes
-        cursor.execute("""
-            SELECT COUNT(*) FROM interventions 
-            WHERE priorite = 'Urgent' AND statut != 'Terminé'
-        """)
-        interventions_urgentes = cursor.fetchone()[0]
+        # Interventions à payer
+        cursor.execute("SELECT COUNT(*) FROM interventions WHERE paiement = 'À payer'")
+        interventions_a_payer = cursor.fetchone()[0]
         
         conn.close()
         
         return {
             "total_clients": total_clients,
-            "interventions_actives": interventions_actives,
-            "interventions_attente": interventions_attente,
-            "interventions_urgentes": interventions_urgentes,
+            "total_interventions": total_interventions,
+            "interventions_a_payer": interventions_a_payer,
         }

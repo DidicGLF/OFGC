@@ -4,16 +4,17 @@ from views.dashboard import DashboardView
 from views.clients import ClientsView
 from views.interventions import InterventionsView
 from views.calendar import CalendarView
+from views.reports import ReportsView
 
 
-class ClientProApp:
+class OrdiFacileApp:
     def __init__(self, page: ft.Page):
         self.page = page
         self.db = Database()
         self.current_view = "dashboard"
         
         # Configuration de la page
-        self.page.title = "ClientPro - Gestion Clients & Interventions"
+        self.page.title = "OrdiFacile - Gestion Clients & Interventions"
         self.page.theme_mode = ft.ThemeMode.DARK
         self.page.padding = 0
         self.page.window_width = 1400
@@ -133,29 +134,57 @@ class ClientProApp:
             ink=True,
         )
     
-    def navigate_to(self, view_id: str):
+    def navigate_to(self, view_id: str, **kwargs):
         """Navigation vers une vue"""
-        if view_id == self.current_view:
+        if view_id == self.current_view and not kwargs:
             return
             
         self.current_view = view_id
-        self.load_view(view_id)
+        self.load_view(view_id, **kwargs)
         self.page.update()
     
-    def load_view(self, view_id: str):
+    def load_view(self, view_id: str, **kwargs):
         """Charge une vue spécifique"""
         # Nettoyer le contenu actuel
         self.content_area.content.controls.clear()
         
         # Charger la nouvelle vue
         if view_id == "dashboard":
-            view = DashboardView(self.page, self.db)
+            view = DashboardView(self.page, self.db, navigate_callback=self.navigate_to)
         elif view_id == "clients":
-            view = ClientsView(self.page, self.db)
+            view = ClientsView(self.page, self.db, navigate_callback=self.navigate_to)
         elif view_id == "interventions":
-            view = InterventionsView(self.page, self.db)
+            view = InterventionsView(
+                self.page, 
+                self.db,
+                filter_client_id=kwargs.get("filter_client_id"),
+                filter_client_name=kwargs.get("filter_client_name"),
+            )
+            # Si open_new=True, ouvrir le dialog automatiquement
+            if kwargs.get("open_new"):
+                # Attendre que la vue soit chargée
+                self.page.update()
+                view.open_add_intervention_dialog(None)
         elif view_id == "calendar":
-            view = CalendarView(self.page, self.db)
+            print(f"DEBUG: Loading calendar view")
+            try:
+                view = CalendarView(self.page, self.db)
+                print(f"DEBUG: Calendar view created successfully")
+            except Exception as e:
+                print(f"ERROR: Failed to create CalendarView: {e}")
+                import traceback
+                traceback.print_exc()
+                raise
+        elif view_id == "reports":
+            print(f"DEBUG: Loading reports view")
+            try:
+                view = ReportsView(self.page, self.db)
+                print(f"DEBUG: Reports view created successfully")
+            except Exception as e:
+                print(f"ERROR: Failed to create ReportsView: {e}")
+                import traceback
+                traceback.print_exc()
+                raise
         else:
             # Vue par défaut pour les sections non implémentées
             view = ft.Container(
@@ -194,7 +223,7 @@ class ClientProApp:
 
 
 def main(page: ft.Page):
-    ClientProApp(page)
+    OrdiFacileApp(page)
 
 
 if __name__ == "__main__":

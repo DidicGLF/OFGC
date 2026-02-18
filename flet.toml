@@ -1,10 +1,10 @@
-# Configuration Flet pour ClientPro
+# Configuration Flet pour OrdiFacile
 
 [app]
 name = "OrdiFacile"
 description = "Application de gestion de clients et interventions"
 version = "1.0.0"
-company = "Ordi'Facile"
+company = "Votre Société"
 product = "OrdiFacile"
 copyright = "Copyright (c) 2026"
 

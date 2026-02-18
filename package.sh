@@ -1,29 +1,34 @@
 #!/bin/bash
 
-# Script de packaging AVEC CONSOLE pour debug
+# Script de packaging avec PyInstaller
+# Plus compatible que flet build, surtout avec Nix
 
 echo "=================================================="
-echo "   ClientPro - Packaging DEBUG (avec console)"
+echo "   OrdiFacile - Packaging avec PyInstaller"
 echo "=================================================="
 echo ""
 
-# Vérifier PyInstaller
+# Vérifier si PyInstaller est installé
 if ! command -v pyinstaller &> /dev/null; then
     echo "❌ PyInstaller n'est pas installé"
-    echo "Installation : pip install pyinstaller"
+    echo ""
+    echo "Installation :"
+    echo "  pip install pyinstaller"
+    echo ""
     exit 1
 fi
 
-echo "🧹 Nettoyage..."
-rm -rf build/ dist/ *.spec 2>/dev/null
+echo "🧹 Nettoyage des anciens builds..."
+rm -rf build/ dist/ 2>/dev/null
 
 echo ""
-echo "📦 Packaging en mode DEBUG (avec console)..."
+echo "📦 Création du package..."
 echo ""
 
-# SANS --windowed pour voir la console !
+# Option 1 : Commande simple (un seul fichier)
 pyinstaller --onefile \
-            --name ClientPro-Debug \
+            --windowed \
+            --name OrdiFacile \
             --add-data "views:views" \
             --add-data "database.py:." \
             --hidden-import views.dashboard \
@@ -38,19 +43,24 @@ pyinstaller --onefile \
             --exclude-module pandas \
             app.py
 
+# Option 2 : Avec le fichier .spec (décommentez si vous préférez)
+# pyinstaller ordifacile.spec
+
 if [ $? -eq 0 ]; then
     echo ""
-    echo "✅ Package DEBUG créé !"
+    echo "✅ Package créé avec succès !"
     echo ""
-    echo "📁 Emplacement : dist/ClientPro-Debug"
+    echo "📁 Emplacement : dist/OrdiFacile"
     echo ""
-    echo "🧪 Lancement avec console pour voir les erreurs :"
-    echo "   ./dist/ClientPro-Debug"
+    echo "🧪 Test de l'exécutable :"
+    echo "   ./dist/OrdiFacile"
     echo ""
-    echo "Une console s'ouvrira et affichera toutes les erreurs !"
+    echo "📤 Distribution :"
+    echo "   tar -czf OrdiFacile-Linux-x64.tar.gz -C dist OrdiFacile"
     echo ""
 else
     echo ""
     echo "❌ Erreur lors du packaging"
+    echo ""
     exit 1
 fi

@@ -5,6 +5,7 @@ from views.clients import ClientsView
 from views.interventions import InterventionsView
 from views.calendar import CalendarView
 from views.reports import ReportsView
+from views.settings import SettingsView
 
 
 class OrdiFacileApp:
@@ -47,13 +48,13 @@ class OrdiFacileApp:
                         content=ft.Row(
                             controls=[
                                 ft.Text(
-                                    "Client",
+                                    "Ordi",
                                     size=24,
                                     weight=ft.FontWeight.BOLD,
                                     color=ft.Colors.WHITE,
                                 ),
                                 ft.Text(
-                                    "Pro",
+                                    "Facile",
                                     size=24,
                                     weight=ft.FontWeight.BOLD,
                                     color=ft.Colors.BLUE,
@@ -185,6 +186,8 @@ class OrdiFacileApp:
                 import traceback
                 traceback.print_exc()
                 raise
+        elif view_id == "settings":
+            view = SettingsView(self.page, self.db)
         else:
             # Vue par défaut pour les sections non implémentées
             view = ft.Container(

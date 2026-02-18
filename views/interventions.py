@@ -225,6 +225,7 @@ class InterventionsView(ft.Container):
             selected_date[0] = date_obj
             date_field.value = date_obj.strftime("%d/%m/%Y")
             calendar_container.visible = False
+            check_time_conflict()  # Vérifier les conflits après changement de date
             self.page.update()
         
         def toggle_calendar(e):
@@ -245,8 +246,73 @@ class InterventionsView(ft.Container):
         
         date_button = ft.IconButton(icon=ft.Icons.CALENDAR_MONTH, tooltip="Choisir", on_click=toggle_calendar)
         
-        heure_debut_field = ft.TextField(label="Heure début", value="09:00", width=100)
-        heure_fin_field = ft.TextField(label="Heure fin", value="10:00", width=100)
+        # Option toute la journée
+        all_day_checkbox = ft.Checkbox(label="Toute la journée (pas d'horaire précis)", value=False)
+        
+        heure_debut_field = ft.TextField(label="Heure début", value="09:00", width=100, hint_text="HH:MM")
+        heure_fin_field = ft.TextField(label="Heure fin", value="10:00", width=100, hint_text="HH:MM")
+        conflict_warning = ft.Text("", color=ft.Colors.ORANGE, size=12, visible=False)
+        
+        def on_all_day_change(e):
+            """Désactive/active les champs horaires selon l'option toute la journée"""
+            is_all_day = all_day_checkbox.value
+            heure_debut_field.disabled = is_all_day
+            heure_fin_field.disabled = is_all_day
+            heure_debut_field.visible = not is_all_day
+            heure_fin_field.visible = not is_all_day
+            conflict_warning.visible = False
+            if is_all_day:
+                heure_debut_field.value = ""
+                heure_fin_field.value = ""
+            else:
+                if not heure_debut_field.value:
+                    heure_debut_field.value = "09:00"
+                if not heure_fin_field.value:
+                    heure_fin_field.value = "10:00"
+            self.page.update()
+        
+        def check_time_conflict(e=None):
+            """Vérifie s'il y a un conflit horaire"""
+            if all_day_checkbox.value or not heure_debut_field.value or not heure_fin_field.value or not date_field.value:
+                conflict_warning.visible = False
+                self.page.update()
+                return
+            
+            try:
+                # Convertir la date
+                date_obj = datetime.strptime(date_field.value, "%d/%m/%Y")
+                date_iso = date_obj.strftime("%Y-%m-%d")
+                
+                # Récupérer toutes les interventions du même jour
+                all_interventions = self.db.get_all_interventions()
+                same_day = [i for i in all_interventions if i["date_intervention"] == date_iso]
+                
+                # Vérifier les conflits
+                debut = heure_debut_field.value
+                fin = heure_fin_field.value
+                
+                conflicts = []
+                for interv in same_day:
+                    if interv.get("heure_debut") and interv.get("heure_fin"):
+                        # Vérifier le chevauchement
+                        if not (fin <= interv["heure_debut"] or debut >= interv["heure_fin"]):
+                            conflicts.append(f"{interv['numero']} ({interv['heure_debut']}-{interv['heure_fin']})")
+                
+                if conflicts:
+                    conflict_warning.value = f"⚠️ Conflit avec: {', '.join(conflicts)}"
+                    conflict_warning.visible = True
+                else:
+                    conflict_warning.visible = False
+                
+                self.page.update()
+            except:
+                conflict_warning.visible = False
+                self.page.update()
+        
+        all_day_checkbox.on_change = on_all_day_change
+        heure_debut_field.on_change = check_time_conflict
+        heure_fin_field.on_change = check_time_conflict
+        
         lieu_dropdown = ft.Dropdown(label="Lieu", options=[ft.dropdown.Option("Domicile"), ft.dropdown.Option("À distance")], value="Domicile")
         paiement_dropdown = ft.Dropdown(label="Paiement", options=[ft.dropdown.Option("Payé"), ft.dropdown.Option("À payer"), ft.dropdown.Option("Gratuit")], value="À payer")
         effectuee_checkbox = ft.Checkbox(label="Intervention effectuée", value=False)
@@ -268,6 +334,13 @@ class InterventionsView(ft.Container):
                     client_dropdown.error_text = "Client obligatoire"
                 if not date_field.value:
                     date_field.error_text = "Date obligatoire"
+                self.page.update()
+                return
+            
+            # Vérifier que le numéro n'existe pas déjà
+            all_interventions = self.db.get_all_interventions()
+            if any(i["numero"] == numero_field.value for i in all_interventions):
+                numero_field.error_text = "Ce numéro existe déjà"
                 self.page.update()
                 return
             
@@ -311,7 +384,9 @@ class InterventionsView(ft.Container):
                         client_dropdown,
                         ft.Row([date_field, date_button], spacing=5),
                         calendar_container,  # Calendrier intégré
+                        all_day_checkbox,
                         ft.Row([heure_debut_field, heure_fin_field], spacing=15),
+                        conflict_warning,
                         lieu_dropdown,
                         paiement_dropdown,
                         effectuee_checkbox,
@@ -353,8 +428,68 @@ class InterventionsView(ft.Container):
         
         date_button = ft.IconButton(icon=ft.Icons.CALENDAR_MONTH, tooltip="Choisir", on_click=pick_date)
         
-        heure_debut_field = ft.TextField(label="Heure début", value=intervention.get("heure_debut", ""), width=100)
-        heure_fin_field = ft.TextField(label="Heure fin", value=intervention.get("heure_fin", ""), width=100)
+        # Option toute la journée (cochée si pas d'horaires)
+        is_all_day = not intervention.get("heure_debut") and not intervention.get("heure_fin")
+        all_day_checkbox = ft.Checkbox(label="Toute la journée (pas d'horaire précis)", value=is_all_day)
+        
+        heure_debut_field = ft.TextField(label="Heure début", value=intervention.get("heure_debut", ""), width=100, hint_text="HH:MM", disabled=is_all_day, visible=not is_all_day)
+        heure_fin_field = ft.TextField(label="Heure fin", value=intervention.get("heure_fin", ""), width=100, hint_text="HH:MM", disabled=is_all_day, visible=not is_all_day)
+        conflict_warning = ft.Text("", color=ft.Colors.ORANGE, size=12, visible=False)
+        
+        def on_all_day_change(e):
+            is_all_day = all_day_checkbox.value
+            heure_debut_field.disabled = is_all_day
+            heure_fin_field.disabled = is_all_day
+            heure_debut_field.visible = not is_all_day
+            heure_fin_field.visible = not is_all_day
+            conflict_warning.visible = False
+            if is_all_day:
+                heure_debut_field.value = ""
+                heure_fin_field.value = ""
+            self.page.update()
+        
+        def check_time_conflict(e=None):
+            if all_day_checkbox.value or not heure_debut_field.value or not heure_fin_field.value or not date_field.value:
+                conflict_warning.visible = False
+                self.page.update()
+                return
+            
+            try:
+                date_obj = datetime.strptime(date_field.value, "%d/%m/%Y")
+                date_iso = date_obj.strftime("%Y-%m-%d")
+                
+                all_interventions = self.db.get_all_interventions()
+                # Exclure l'intervention en cours de modification
+                same_day = [i for i in all_interventions if i["date_intervention"] == date_iso and i["id"] != intervention["id"]]
+                
+                debut = heure_debut_field.value
+                fin = heure_fin_field.value
+                
+                conflicts = []
+                for interv in same_day:
+                    if interv.get("heure_debut") and interv.get("heure_fin"):
+                        if not (fin <= interv["heure_debut"] or debut >= interv["heure_fin"]):
+                            conflicts.append(f"{interv['numero']} ({interv['heure_debut']}-{interv['heure_fin']})")
+                
+                if conflicts:
+                    conflict_warning.value = f"⚠️ Conflit avec: {', '.join(conflicts)}"
+                    conflict_warning.visible = True
+                else:
+                    conflict_warning.visible = False
+                
+                self.page.update()
+            except:
+                conflict_warning.visible = False
+                self.page.update()
+        
+        all_day_checkbox.on_change = on_all_day_change
+        heure_debut_field.on_change = check_time_conflict
+        heure_fin_field.on_change = check_time_conflict
+        
+        # Vérification initiale des conflits (pour mode édition)
+        self.page.update()
+        check_time_conflict()
+        
         lieu_dropdown = ft.Dropdown(label="Lieu", options=[ft.dropdown.Option("Domicile"), ft.dropdown.Option("À distance")], value=intervention.get("lieu"))
         paiement_dropdown = ft.Dropdown(label="Paiement", options=[ft.dropdown.Option("Payé"), ft.dropdown.Option("À payer"), ft.dropdown.Option("Gratuit")], value=intervention["paiement"])
         effectuee_checkbox = ft.Checkbox(label="Intervention effectuée", value=bool(intervention.get("effectuee")))
@@ -365,6 +500,13 @@ class InterventionsView(ft.Container):
             self.page.close(dialog)
         
         def save(e):
+            # Vérifier que le numéro n'est pas déjà utilisé par une AUTRE intervention
+            all_interventions = self.db.get_all_interventions()
+            if any(i["numero"] == numero_field.value and i["id"] != intervention["id"] for i in all_interventions):
+                numero_field.error_text = "Ce numéro existe déjà"
+                self.page.update()
+                return
+            
             try:
                 date_obj = datetime.strptime(date_field.value, "%d/%m/%Y")
                 date_iso = date_obj.strftime("%Y-%m-%d")
@@ -399,7 +541,19 @@ class InterventionsView(ft.Container):
                 width=600,
                 padding=ft.padding.only(top=20, bottom=10, left=20, right=20),
                 content=ft.Column(
-                    controls=[numero_field, client_dropdown, ft.Row([date_field, date_button], spacing=5), ft.Row([heure_debut_field, heure_fin_field], spacing=15), lieu_dropdown, paiement_dropdown, effectuee_checkbox, resume_field, detail_field],
+                    controls=[
+                        numero_field,
+                        client_dropdown,
+                        ft.Row([date_field, date_button], spacing=5),
+                        all_day_checkbox,
+                        ft.Row([heure_debut_field, heure_fin_field], spacing=15),
+                        conflict_warning,
+                        lieu_dropdown,
+                        paiement_dropdown,
+                        effectuee_checkbox,
+                        resume_field,
+                        detail_field,
+                    ],
                     spacing=25,
                     scroll=ft.ScrollMode.AUTO,
                     height=550,
@@ -445,7 +599,15 @@ class InterventionsView(ft.Container):
                     height=400,
                 ),
             ),
-            actions=[ft.TextButton("Fermer", on_click=close_dialog)],
+            actions=[
+                ft.TextButton("Fermer", on_click=close_dialog),
+                ft.ElevatedButton(
+                    "🗑️ Supprimer",
+                    bgcolor=ft.Colors.RED,
+                    color=ft.Colors.WHITE,
+                    on_click=lambda e: (close_dialog(e), self.delete_intervention(intervention)),
+                ),
+            ],
         )
         
         self.page.open(dialog)
